@@ -1,0 +1,17 @@
+* Course Overview
+- Piazza for questions
+- Canvas for announcements
+- Canvas Inbox for private messages
+
+** Grading
+- Homework Assignments 25%
+- 3-4 Programming Assignments 35%
+- 1 Midterm (Feb 21 @ Class) 15%
+- Final (Closed book, comprehensive) (Apr 30 13:00-15:00 @ TBD) 25%
+
+*** Late Policy
+10% penalty for each late day
+=After two days it's a zero=
+
+** Reading Assignments
+Most classes will have reading assignments. _Highly recommended to do them._

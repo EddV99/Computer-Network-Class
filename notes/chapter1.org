@@ -1,0 +1,367 @@
+stopped at pg 22 the network core
+* Chapter 1 - Introduction
+=What is the internet? What is a protocol?=
+** Internet: A "Nuts and Bolts" View
+A view of the internet in a "nuts and bolts" view is: Many computing devices
+connected running network apps at the Internets "edge"
+
+=Hosts/End Systems=: The various devices being connected to the internet today:
+mobile phones, TVs, fridges, etc. These end systems are connected together with
+packet switches and communication links.
+
+*** How do end systems connect or transport data?
+
+=Communication links=: Connections like fiber, copper, radio, satellite, ...
+Transmission rate is called =bandwidth=
+
+These links transmit data at different rates. The measure of these links is
+called =transmission rate=, its units in bits/second.
+
+When one end system needs to send data to another, it has to segment the data
+and add header information. This form of segmented data that gets sent is called
+a =packet=. The receiving end system reassembles the packets.
+
+=Packet Switches=: Forward packets (chunks of data). It takes the incoming packets
+arriving from an incoming communication links and forwards it one of its
+outgoing communication links. Common packet switches are routers and link-layer switches.
+
+The sequence of communication links and packet switches, one packet takes is called
+a =path= or =route=.
+
+End systems access the Internet through =Internet Service Providers (ISP)=.
+
+*** A little on ISPs
+It is in itself a network of communication links and packet switches.
+
+Many ISPs like residential, corporate, university, hotel/public areas.
+
+They also have various network access to end systems like cable modem (DSL),
+high-speed local area, and mobile wireless.
+
+Each ISP is also inter-connected. Lower tier are connected to the national and
+international upper-tier ISPs. The upper-tier ISPs are also connected to each
+other. Each ISP is managed independently and follow the *IP* protocol.
+
+*** Networks and Protocol
+Since so many networks, we need a way to send, receive messages. We've agreed to
+=protocols=, so everyone has a standard to send/receive.
+
+Some of the most important protocols are Transmission Control Protocol (TCP) and
+Internet Protocol (IP).
+
+The =IP= protocol specifies the format of the packets that are sent/received among
+routers and end systems.
+
+These principal protocols are known together as TCP/IP. (We learn these protocols later)
+
+**** Who decides these Internet Standards
+RFC: Request for Comments (Kinda like a request for a new standard)
+IETF: Internet Engineering Task Force (These people ratify the RFCs)
+
+** Service Description
+We can also view the internet as an infrastructure that provides services to
+applications.
+
+=Distrubuted Applications=: Stuff like mobile smartphones, internet messaging,
+maps with real-time road traffic info., music streaming, ... These involve
+multiple end systems communicating to each other. These run on end systems, not
+in packet switches in the network core.
+
+=Socket Interface=: Specifies how a program on one end system asks the Internet
+infrastructure to deliver data to a specific destination program running on
+another end system. Just a set of rules that the sending program must follow so
+that the Internet can deliver to the destination. (More on this later)
+
+** What is a protocol?
+=Protocol=: Define the format, order of messages sent and received among network
+entities, and actions taken on message transmission or receipt.
+
+For protocols to work both ends of a network must agree to the protocol
+
+** The Network Edge
+The internet is a "network of networks".
+
+End systems get their name because they are at the end/edge of the internet (when
+data gets sent it ultimately reaches an end system).
+
+End system can also be called hosts because host application programs like a web browser.
+
+=Hosts= (again): Clients and servers. Servers often are in large data centers.
+Clients tend to be desktops, laptops, smartphones, ...
+
+** Access Networks
+=Networks=: Collection of devices, routers, links: managed by an organization.
+
+=Access Networks=: First router that touches the packet. The
+network that physically connects the end system to the first router (edge
+router) on a path from the end system to any other distant end system.
+
+=Physical Media=: Bits follow through a series of receiver/transmitter pairs,
+which propagates the bits by optical pulses or electromagnetic waves through a
+=physical medium= (radio, fiber cable, twisted-pair copper wire, ...).
+
+Types of Physical Media: =Guided media= and =Unguided media=. In guided media,
+waves are guided along a solid medium(copper wire, fiber-optic cable). In
+unguided media, waves propagate in the atmosphere and outer space (wireless
+LAN).
+
+*** Links: Physical Media
+=Bit=: propagates between transmitter/receiver pairs
+=Physical Link=: lies between transmitter and receiver
+=Guided Media=: signals propagate in solid media: copper, fiber coax
+=Unguided Media=: signal propagate freely, e.g. radio.
+=Twisted Pair(TP)=: two insulated plugs
+=Coaxial Cable=: two concentric copper conductors
+=Fiber Optic Cable=: glass fiber carrying light pulses, each pulse a bit.
+=Wireless Radio=: signal carried in various "bands" in electromagnetic spectrum
+=Radio Link Types=: Wireless LAN (WIFI), Wide Area, Bluetooth, ...
+
+*** Access Networks: Cable-based
+Used in homes
+=Cable Internet Access=
+
+An example:
+    One wire through the neighborhood giving TV network data to each TV.
+
+Frequency Division Multiplexing (FDM): Different channels transmitted in different frequency bands.
+Hybrid Fiber Coax (HFC): Asymmetric (40mbs-1.2Gbps download/30mbs-100mbs upload)
+
+It is a shared broadcast medium, which can have some downsides like, slower
+connections when many people request/send data, or security concerns.
+
+Uses FDM in the HFC to send to the CMTS which works similar to the DSLAM (see DSL).
+*** Access Networks: Digital Subscriber Line (DSL)
+Used in homes
+
+Use existing telephone line to central office DSLAM (DSLAM separates data and
+phone signals and sends data to internet)
+    - Data over DSL phone line goes to Internet
+    - Voice over DSL phone line goes to telephone net
+Asymmetric (24-50 Mbps down/3.5-16 Mbps up)
+
+Also uses FDM!!
+
+*** Access Networks: More Home Networks
+**** =Fiber to the home (FTTH)=
+Provide optical fiber path from the CO to the home directly.
+
+Potentially provide rates in the Gigabits / second
+
+Common optical distribution network is direct fiber, which has a single fiber
+connection from the CO until it gets close to the home which then splits.
+**** Some key terms
+Modem: Code/Decode data
+Router: Where to send packets
+WIFI Access Point: WIFI for devices
+
+*** Access Networks: Enterprise Networks
+Companies, universities
+
+Local Area Network (LAN)
+
+*** Access Networks: Data Center Networks
+High-bandwidth links (10-100 Gbps) to connect hundreds to thousands of servers together to the internet.
+
+*** Wireless Access Networks
+Shared wireless access network connects end system to router
+
+Wireless Local Area Networks (WLANs): Higher transmissions rates. Limited range.
+Wide-area cellular access networks: Mobile networks. Lower transmission rates. Bigger range.
+
+** Network Core
+Mesh of interconnect routers
+
+*** Packet-switching
+In a network application, end systems exchange messages(email, videos,
+pictures). Before sending them out it has to break long messages into smaller
+chunks called =packets=.
+
+Between end systems the packet travels through communication links and =packet=
+=switches= (routers or link-layer switches).
+
+Packets are transmitted over each communication link at rate equal to full
+transmission rate of the link.
+
+Time to transmit a packet with L bits and rate R bits / sec
+    transmit_{t} = L / R
+
+**** Store-and-Forward Transmission
+A feature for some packet switches.
+
+From input of packet switches to links.
+
+Packet Switch must receive the entire packet before it can begin to transmit the
+first bit of the packet to the outbound link.
+
+**** Packet Queuing and Packet Loss
+Each packet switch has a =output buffer/output queue= for each attached link.  The
+output buffer stores packets that it's about to send to that link. If a packet
+arrives and needs to be transmitted onto a link, but finds its busy transmitting
+another packet, the arriving packet must wait in the output buffer.
+
+This creates a delay called a =queuing delay=.
+
+If an arriving packet finds the output buffer to be full, =packet loss= will occur
+(either arriving packet or one in queue gets lost).
+
+*** Forwarding Tables and Routing Protocols
+When a packet arrives from one link to the router, how does the router know
+which output link to send it through?
+
+Many ways to go about this problem. Every end system has a IP address, which is
+kind of like a home address. In the internet we use a =forwarding table=. This
+forwarding table maps destination addresses to that router's outbound links.
+
+Many =routing protocols= to automatically set the forwarding table.
+
+Forwarding: Local action move arriving packets from router's input link to
+appropriate output link.
+
+Routing: Global action to determine source-destination paths taken by packets.
+Many routing algorithms exist.
+
+*** Circuit Switching
+Another fundamental approach to moving data between the network of links and
+switches. (An alternative to packet-switching)
+
+All resources needed along a path (buffers, link transmission rate) to provide
+for communication between end systems are /reserved/ for the duration of the
+communication session between end systems.
+
+In the example of someone trying to call someone else through a phone, a
+connection between the two must be made. This connection is called a =circuit=.
+
+A circuit in a link is implemented two types of ways
+    - =Frequency-Division Multiplexing (FDM)=
+    - =Time-Division Multiplexing (TDM)=
+*** Network of Networks
+End systems connect to the internet through an =access= ISP.
+
+This means access ISPs must be interconnected to be able to access all of the
+internet.
+
+Many global ISP connecting the access ISPs.
+This means the global ISPs are interconnected.
+
+These global ISP are actually called =tier-1 ISPs=. Their are only a dozen
+tier-1 ISPs.
+
+You can imagine a small region wanting to connect to the internet, so a
+=regional ISP= starts up a service that an access ISP can connect to,
+that means also connects to a tier-1.
+
+The current model looks like this:
+
+Tier-1   ISP   TOP
+Regional ISP   ---
+Access   ISP   BOT
+
+
+=Point of Presence (PoP)=: An inner network of routers, where customers can
+connect to.
+
+=Multi-Home=: Connecting to two or more ISPs. Many regional ISP do this and
+someone at home can as well. An example could be paying for Sprint and AT&T
+(both tier 1).
+
+=Peer=: Two of the same level of the heirarchy connect to reduce costs.
+
+=Internet Exchange Point (IXP)=: A meeting point for multiple ISPs to peer
+together. (Usually from a 3rd-party)
+
+=Content-Provider Networks=: Popularized by Google, it is a _private_ network
+connected across the map. These private networks only traffic data from one
+source, Google for example. This reduces costs for Google and is one way Google
+is so fast.
+
+** Delay, Loss, and Throughput in Packet-Switched Networks
+When a packet gets sent a high-level overview is:
+    End System (source) \rightarrow Routers \rightarrow End System (destination)
+
+Between each node(router/end system) the packet experiences various delays.
+
+The most important delays are:
+    - =Nodal Processing=
+    - =Queuing Delay=
+    - =Transmission Delay=
+    - =Propagation Delay=
+
+Together these delays give a =total nodal delay=
+
+    $$d_{nodal_{total}} = d_{proc} + d_{queue} + d_{tran} + d_{prop}$$
+
+*** Processing Delay
+This delay is the time required to examine the packet header and direct the
+packet to. This could also include stuff like error checking.
+
+Usually in microseconds (\micro{}s)
+
+*** Queuing Delay
+When a packet is in a queue, the packet is waiting its turn to be transmitted
+through a link.
+
+When the queue is empty an incoming packet will experience zero queuing delay.
+Otherwise the delay will depend on the number of currently queued packets.
+
+Usually in microseconds (\micro{}s) and sometimes milliseconds (ms)
+
+*** Transmission Delay
+The amount of time required to push the bits of a packet into a outgoing link.
+
+If a packet was of length $L$ bits on a link with rate $R$ bits/sec
+the transmission delay would be
+$$d_{tran} = \frac{L}{R}$$
+
+*** Propagation Delay
+Once the bit is on the link, it needs to propagate (transmit) to the next
+router. This time is called the propagation delay.
+
+The rate at which the bit moves across the link depends on the medium. The link
+could be fiber, copper, air, and so on. Usually in the range
+    2*10^{8} m/s to 3*10^{8} m/s t
+
+the propagation delay is the length $d$ between the two routers divided by the speed $s$.
+
+    $$d_{prop} = \frac{d}{s}$$
+
+* Key Terms
+- Bandwidth
+- Cable Internet Access
+- Clients
+- Communication Links
+- Content Provider Network
+- Data Centers
+- Digital Subscriber Line (DSL)
+- Distributed Applications
+- Edge Router
+- Fiber To The Home (FTTH)
+- Forwarding Table
+- Guided Media
+- Host/End System
+- Internet
+- Internet Exchange Point (IXP)
+- Internet Protocol (IP)
+- Internet Service Provider (ISP)
+- Link-Layer Switch
+- Multi-Home
+- Network Core
+- Network Edge
+- Output Buffer/Output Queue
+- Packet
+- Packet Switches
+- Peering Link
+- Performance
+- Physical Medium
+- Pop
+- Protocol
+- Regional ISP
+- Route/Path
+- Routers
+- Routing Protocol
+- Servers
+- Socket Interface
+- Store-and-Forward Transmission
+- Tier 1 ISP
+- Transmission Control Protocol (TCP)
+- Transmission Rate
+- Unguided Media

@@ -1,0 +1,52 @@
+
+* Topics
+- Application Layer: Overview
+- Sockets
+- Addressing Processes
+- Internet Transport Protocols Services
+  + TCP
+  + UDP
+- Socket Programming with UDP
+- UDP Port-based Demultiplexing
+- Socket Programming with TCP
+- TCP Demultiplexing
+- Web and HTTP
+- Maintaining user/server state: cookies
+- Web Caches
+- Email
+- DNS: Domain Name System
+
+
+
+
+* Socket Interface: UDP
+Create a socket, allocates OS-assigned port number and buffer
+Other families: AF_INET6, AF_UNIX
+    ~socket(AF_INET, SOCK_DGRAM)~
+
+Associate a specific local address and port number with the socket
+    ~bind((host_addr, port))~
+
+Send a data-gram containing the indicated bytes to indicated destination
+    ~sendto(data, (host_addr, port)) -> count~
+
+Receive a data-gram along with the (host_addr, port) of its sender
+    ~recvfrom(buffersize) -> (data, (host_addr, port))~
+
+* Socket Interface: TCP Client [not done]
+Create a socket, allocates OS-assigned port number and buffer
+Other families: AF_INET6, AF_UNIX
+    ~socket(AF_INET, SOCK_STREAM)~
+
+
+Attempt to establish a connection with a remote socket and associate
+Associate a specific local address and port number with the socket
+    ~bind((host_addr, port))~
+
+Send a data-gram containing the indicated bytes to indicated destination
+    ~sendto(data, (host_addr, port)) -> count~
+
+Receive a data-gram along with the (host_addr, port) of its sender
+    ~recvfrom(buffersize) -> (data, (host_addr, port))~
+
+* Socket Interface: TCC Server [not done]

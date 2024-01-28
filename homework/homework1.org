@@ -1,0 +1,161 @@
+* Homework 1  - 10 Questions - 39pts
+CURRENT SCORE [39 / 39]
+* Q1. CORRECT
+How many of the programming assignments will you have to complete to pass the
+course?
+** Choose one
+[] 0
+[] 1
+[] 2
+[x] All
+
+* Q2. CORRECT
+Match the different kinds of delay that can be experienced in a packet-switched
+network to their correct definition.
+
+[4] Processing delay (d_proc)
+[2] Queuing delay (d_queue)
+[1] Transmission delay (d_trans)
+[3] Propagation delay (d_prop)
+
+Answer Bank:
+1. The amount of time required to push or encode all of packet's bits into the
+   link
+2. Delay that the packet experiences waiting at a node as for its turn to be
+   processed
+3. The time required to propagate from the beginning of one link to the next
+   node
+4. The time required for a node to examine the packet's header and determine
+   where to direct the packet.
+
+* Q3. CORRECT
+
+Match each scenario to a nodal delay component where it would most likely
+dominate (make up more than half of) total nodal delay.
+
+[4] Packets on a 400 Gbps data center network are routed by a software router
+running on a 1 kHz CPU
+
+[3] 1 packet arrives at the back of a burst of 1000 packets that arrive
+simultaneously at a switch destined for the same output port.
+
+[2] 1 packet arrives at a data center switch output port that is misconfigured to
+transmit at 10 Mbps.
+
+[1] 1 packet is sent from the University of Utah to University of Massachusetts
+via an idle 100 Gbps link
+
+Answer Bank:
+1. Propagation delay (d_prop)
+2. Transmission delay (d_trans)
+3. Queuing delay (d_queue)
+4. Processing delay (d_proc)
+
+* Q4. CORRECT
+
+Imagine a path from Server A to B consisting of three links L_{1}, L_{2}, L_{3} and which
+each packet must pass through in order to get from A to B. L_{1}, L_{2}, L_{3} and have
+transmission speeds R_{1} \lt R_{2} \lt R_{3}, respectively. What is the maximum throughput
+that can be sustained from A to B?
+
+** Choose one
+[x] R1
+[] R2
+[] R3
+
+* Q5. CORRECT
+
+Imagine a path from Server A to B consisting of three links L_{1}, L_{2}, L_{3} and which
+each packet must pass through in order to get from A to B. L_{1}, L_{2}, L_{3} and have
+transmission speeds R_{1} \lt R_{2} \lt R_{3}, respectively. If the transmission speed of R_{1}
+is increased to R_{3}, what is the maximum amount that throughput from A to B could
+increase?
+
+** Choose one
+[] 0
+[x] R_{2} - R_{1}
+[] (R_{2} - R_{1}) / 3
+
+* Q6. CORRECT
+Match the examples on the left as either primarily forwarding-related or
+routing-related to demonstrate your understanding of the difference between
+forwarding and routing.
+
+[2] A packet enters a route on port 1, and the router chooses to transmit the
+packet on port 2
+
+[1] A network administrator adds a new router to the network, so she runs a tool
+which reconfigured the forwarding tables on her network's routers.
+
+Answer Bank:
+1. Routing
+2. Forwarding
+
+* Q7. CORRECT
+
+Consider a packet of length =L= that begins at end system A and travels over three
+links to a destination end system. These three links are connected by two packet
+switches. Let d_{i}, s_{i}, R_{i} and denote the length, propagation speed, and the
+transmission rate of link i \in {1, 2, 3}. The packet switch delays each packet by
+d_{proc}. Assuming no queuing delays, in terms of =L=, d_{i}, s_{i}, R_{i}, and i, what terms
+below sum to the total end-to-end delay for the packet?
+
+That is choose the terms below that when inserted into the follow equation would
+compute the total end-to-end delay for the packet:
+
+d_{end-end} = _ + _ + _ + _ + _ + _ + _
+
+** Fill (need 7 out of 9)
+[x] L / R_{1}
+[x] L / R_{2}
+[x] L / R_{3}
+[x] d_{1} / s_{1}
+[x] d_{2} / s_{2}
+[x] d_{3} / s_{3}
+[] d_{proc}
+[x] 2 * d_{proc}
+[] 3 * d_{proc}
+
+* Q8. CORRECT
+Suppose in Question 1 the packet is 1,500 bytes, the propagation speed on all
+three links is 2.5 x 10^{8 }m/s, the transmission rates of all three links are 2.5
+Mbps, the packet switch processing delay is 3 ms, the length of the first link
+is 5,000 km, the length of the second link is 4,000 km, and the length of the
+last link is 1,000 km. For these values, what is the end-to-end delay to the
+nearest millisecond?
+
+** Text Answer
+60
+* Q9. CORRECT
+Suppose =N= packets arrive simultaneously to a link at which no packets are
+currently being transmitted or queued. Each packet is of length =L= and the link
+has transmission rate =R=. What is the *average queuing delay* for the =N= packets?
+
+This is a challenging question. To see the answer write down an expression for
+the queuing delay that each of the each of the packets experiences. The first
+packet experiences no delay, the second packet experiences .... delay, and so
+on. Get a sense for this pattern. Then sum up each of the packet's delay. That
+gets you total queuing delay for all packets. Then and divide by =N= to get the
+average.
+
+** Choose one
+[] 0
+[] NL / R
+[] NL / 2R
+[] (N - 1)L / R
+[x] (N - 1)L / 2R
+
+* Q10. CORRECT
+Now suppose that =N= such packets arrive to the link every =LN= / =R= seconds. What is
+the average queuing delay of a packet?
+
+To solve this question consider the answer to the prior question, and consider:
+what is the state of the queue at time =LN= / =R= seconds after the time that the
+first burst of packets arrived?
+
+** Choose one
+[] 0
+[] NL / R
+[] NL / 2R
+[] (N - 1)L / R
+[x] (N - 1)L / 2R
