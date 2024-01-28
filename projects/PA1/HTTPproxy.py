@@ -143,7 +143,63 @@ def get_hostname_port_and_path(request: bytes):
 
     return (host, port, path)
 
-# TODO: Put function definitions here
+
+def get_headers(request: bytes):
+    """get the headers from a request
+
+    Return:
+        A list with the headers
+    """
+    lines = request.split(b'\r\n')
+    headers = []
+    firstLine = True
+
+    for line in lines:
+        if (not firstLine) and line:
+            headers.append(line)
+        else:
+            firstLine = False
+
+    return headers
+
+
+def create_request(host, path, headers):
+    """create a new request
+
+    For this assignment, ensure the request has one "Connection:" header with
+    the value "close".
+
+    Return:
+        A byte string with the new request
+    """
+    request = b'GET' + b' ' + path + b' HTTP/1.0\r\n'
+
+    header = b'Host: ' + host + b'\r\n'  # maybe add port here?
+    request = request + header
+
+    header = b'Connection: close\r\n'
+    request = request + header
+
+    for h in headers:
+        name = h.split(b' ')[0]
+        if name != b'Host:' or name != b'Connection:':
+            header = h + b'\r\n'
+            # request.append(header)
+            request = request + header
+
+    request = request + b'\r\n'
+    logging.debug(f'created request is {request}')
+
+    return request
+
+
+def send_request(host, port, request):
+    with socket(AF_INET, SOCK_STREAM) as client_socket:
+        client_socket.connect((host, port))
+        client_socket.send(request)
+        response = client_socket.recv(2048)
+
+    return response
 
 
 # start of program execution
@@ -200,5 +256,11 @@ with socket(AF_INET, SOCK_STREAM) as listen_socket:
         logging.info(f'port is {port}')
         logging.info(f'path is {path}')
 
-        client_socket.send(b'\r\n\r\n')
+        headers = get_headers(request)
+
+        request_for_origin_server = create_request(host, path, headers)
+
+        response = send_request(host, port, request_for_origin_server)
+
+        client_socket.send(response)
         client_socket.close()
