@@ -1,4 +1,3 @@
-stopped at pg 22 the network core
 * Chapter 1 - Introduction
 =What is the internet? What is a protocol?=
 ** Internet: A "Nuts and Bolts" View
@@ -290,6 +289,8 @@ Together these delays give a =total nodal delay=
 
     $$d_{nodal_{total}} = d_{proc} + d_{queue} + d_{tran} + d_{prop}$$
 
+This nodal delay is the delay for one router
+
 *** Processing Delay
 This delay is the time required to examine the packet header and direct the
 packet to. This could also include stuff like error checking.
@@ -304,6 +305,20 @@ When the queue is empty an incoming packet will experience zero queuing delay.
 Otherwise the delay will depend on the number of currently queued packets.
 
 Usually in microseconds (\micro{}s) and sometimes milliseconds (ms)
+
+**** Traffic Delay
+/Assuming an infinite queue/
+
+When analyzing problems with significance of queuing delay and when it's a
+problem, a useful tool is =traffic delay=. If $a$ is the average rate at which
+packets arrive (packets / sec), $R$ is the transmission rate (bits / sec) and
+for simplicity each packet is $L$ bits. Then the average rate at which bits
+arrive at the queue is $La$ (bits / sec). The ratio $La / R$ is the =traffic=
+=intensity=. If $La/R > 1$ the stack tends to grow to infinity!
+
+**** Packet Loss
+We've been assuming an infinite queue, but in reality the queue has a size and
+when a packet try's to queue in a full queue, a packet gets lost.
 
 *** Transmission Delay
 The amount of time required to push the bits of a packet into a outgoing link.
@@ -323,6 +338,61 @@ could be fiber, copper, air, and so on. Usually in the range
 the propagation delay is the length $d$ between the two routers divided by the speed $s$.
 
     $$d_{prop} = \frac{d}{s}$$
+
+** End-to-End Delay
+The delay from source to destination. Sum of nodal delays.  For simplicity, if
+we were in a network with no queuing delay and $N - 1$ routers then the
+end-to-end delay is:
+    $$d_{end-to-end} = N(d_{proc} + d_{tran} + d_{prop})$$
+
+** Protocol Layering
+The internet is layers of protocols. Together a collection of layers used is
+called the =protocol stack=.
+
+Protocol Stack for the Internet
+*** Application Layer
+Network applications and application-layer protocols reside.
+
+Some protocols in this layer include HTTP, SMTP, DNS, and FTP.
+*** Transport Layer
+Transports the application-layer messages between application endpoints. In the
+internet two transport protocols, TCP and UDP.
+
+Transport-layer packet is a =segment=
+**** TCP
+Connection oriented service that guarantees delivery of application layer
+messages to destination and flow control.
+
+**** UDP
+Connection-less service to applications. No reliability, no flow control, and no
+congestion control.
+
+*** Network Layer
+Move network-layer packets known as =datagrams= from one host to another. The
+source host sends a transport-layer segment and destination address.
+
+The network layer provides the service of delivering the segment to the
+transport layer of the destination.
+
+The most well known protocol in the network layer is IP. Also includes routing
+protocols, but we usually combine them to the IP protocol. /IP/ protocol is
+really important.
+
+*** Link Layer
+To move the packet from one node (host or router) to the next in the route the
+network layer relies on the link-layer to deliver the datagram to the next node
+in the route, which then delivers to the next network-layer.
+
+Some examples of link-layer protocols include:
+    Ethernet, WiFi, and cables access network's DOCSIS protocols.
+
+Link-layer packets are called =frames=.
+*** Physical Layer
+Similar to the link-layer, the physical-layer's job is to move individual bits
+within the frame from one node to the next. Protocols in this layer are link
+dependent and depend on the transmission medium of the link (twisted-pair copper
+wire, fiber optics). An Ethernet link-layer may have many physical-layer
+protocols, one for copper wire, coaxial, or fiber.
 
 * Key Terms
 - Bandwidth

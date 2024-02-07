@@ -1,4 +1,93 @@
+* Chapter 2 - Application Layer
+** Principles of Network Applications
+*** Network Application Architecture
+*** Processes Communicating
+*** Transport Services Available to Applications
+*** Transport Services Provided by the Internet
+*** Application-Layer Protocols
+** Web and HTTP
+*** Overview of HTTP
+*** Non-Persistent and Persistent Connections
+*** HTTP Message Format
+*** User-Server Interaction: Cookies
+*** Web Caching
+*** HTTP/2
+** Electronic Mail
+*** SMTP
+*** Mail Message Formats
+*** Mail Access Protocols
+** DNS - The Internet's Directory Service
+We want to be able to identify a host in many ways
 
+One of these identifiers is the =hostname=. Examples include /www.facebook.com/,
+/www.google.com/, /utah.edu/, ...
+
+These hostname have little information the location within the Internet.
+For these reasons we also have =IP addresses= (explained in chapter 4) to identify
+a host.
+
+*** Services Provided by DNS
+We've seen two ways to identify a host, hostnames and IP addresses. People in
+general prefer to have a mnemonic name to remember and routers use want IP
+addresses, so we need directory service that translates hostnames to IP
+addresses.
+
+The translation from hostname to IP address is one of the main tasks of the
+=Domain Name System (DNS)=.
+
+DNS is:
+    1) A distributed database implemented in hierarchy of DNS servers
+    2) An application-layer protocol that allows hosts to query the distributed
+       database.
+It also uses UDP and conventionally on port 53.
+
+An example of using DNS:
+    Imaging someone wanting to get the web-page
+    /www.google.com\?search=mamaluigi/ the steps would look like this:
+
+        1) User machine runs client-side DNS application
+
+        2) Browser extracts the host name, /www.google.com/, from the URL and
+           sends it to the client-side DNS application
+
+        3) DNS client sends query containing the hostname to the DNS server
+
+        4) DNS client eventually gets a reply with the IP address for the hostname
+
+        5) Once IP address has been obtained, the browser can make a TCP
+           connection to the HTTP server at port 80 at that IP address
+
+From the example we see that DNS adds another layer of delay, but we'll find out
+that we'll use caching to help this delay.
+
+***** Other Important Services in DNS
+****** =Host Aliasing=
+A host with a complicated hostname can have one or more alias names. Example.
+/relay1.west.enterprise.com/ can have the alias' /enterprise.com/ and
+/www.enterprise.com/
+
+In that case we call /relay1.west.enterprise.com/, the =canonical hostname=.
+
+****** =Mail Server Aliasing=
+Email addresses are also something we might want to be simple. An /MX/ record
+allows a company's mail server and Web server to have the alias.
+
+****** =Load Distribution=
+DNS is also used to perform load distributions among replicated servers. Busy
+sites, like /www.fox.com/, are replicated over multiple servers (each server on a
+different end-system, with different IPs). For these replicated systems a set of
+IPs are associated with an alias hostname.
+*** Overview of How DNS Works
+*** DNS Records and Messages
+** Peer-to-Peer File Distribution
+** Video Streaming and Content Distribution Networks
+*** Internet Video
+*** HTTP Streaming and DASH
+*** Content Distribution Networks
+*** Case Studies: Netflix and YouTube
+** Socket Programming
+*** Socket Programming with UDP
+*** Socket Programming with TCP
 * Topics
 - Application Layer: Overview
 - Sockets
@@ -15,38 +104,5 @@
 - Web Caches
 - Email
 - DNS: Domain Name System
-
-
-
-
-* Socket Interface: UDP
-Create a socket, allocates OS-assigned port number and buffer
-Other families: AF_INET6, AF_UNIX
-    ~socket(AF_INET, SOCK_DGRAM)~
-
-Associate a specific local address and port number with the socket
-    ~bind((host_addr, port))~
-
-Send a data-gram containing the indicated bytes to indicated destination
-    ~sendto(data, (host_addr, port)) -> count~
-
-Receive a data-gram along with the (host_addr, port) of its sender
-    ~recvfrom(buffersize) -> (data, (host_addr, port))~
-
-* Socket Interface: TCP Client [not done]
-Create a socket, allocates OS-assigned port number and buffer
-Other families: AF_INET6, AF_UNIX
-    ~socket(AF_INET, SOCK_STREAM)~
-
-
-Attempt to establish a connection with a remote socket and associate
-Associate a specific local address and port number with the socket
-    ~bind((host_addr, port))~
-
-Send a data-gram containing the indicated bytes to indicated destination
-    ~sendto(data, (host_addr, port)) -> count~
-
-Receive a data-gram along with the (host_addr, port) of its sender
-    ~recvfrom(buffersize) -> (data, (host_addr, port))~
-
-* Socket Interface: TCC Server [not done]
+- P2P Applications
+- Video Streaming
