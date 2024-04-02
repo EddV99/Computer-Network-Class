@@ -106,60 +106,49 @@ class EntityA:
     # zero and seqnum_limit-1, inclusive.  E.g., if seqnum_limit is 16, then
     # all seqnums must be in the range 0-15.
     def __init__(self, seqnum_limit):
-        self.seqnum = 0
-        # lower/upper limits of seqnums (inclusive)
-        self.seqnum_lower_bound = 0
-        self.seqnum_upper_bound = seqnum_limit - 1 
-        self.packet = Pkt(0, 0, 0, bytes(Msg.MSG_SIZE))
-
+        self.limit = seqnum_limit - 1
+        self.buffer = []
+        self.seq = 0
+        self.ack = 0
+        self.timeout = 50
+        self.last_packet = None
+        self.wait = True
 
     # Called from layer 5, passed the data to be sent to other side.
     # The argument `message` is a Msg containing the data to be sent.
     def output(self, message):
-        trace('Entity A: Got a message from layer 5')
-
-        ack = 0
-        sum = checksum(self.seqnum, ack, message.data)
-
-        trace(f'Entity A: Sending a packet with seqnum {self.seqnum} to layer 3')
-        packet_to_send = Pkt(self.seqnum, ack, sum, message.data)
-        self.packet = packet_to_send
-        to_layer3(self, packet_to_send)
-
-        trace('Entity A: Starting timer')
-        start_timer(self, 10.0) 
+        if not self.wait:
+            return
+        sum = checksum(self.seq, 0, message.data)
+        packet = Pkt(self.seq, 0, sum, message.data)
+        self.last_packet = packet
+        to_layer3(self, packet)
+        start_timer(self, self.timeout)
+        self.wait = False        
+        self.seq += 1
+        if self.seq > self.limit:
+            self.seq = 0
 
     # Called from layer 3, when a packet arrives for layer 4 at EntityA.
     # The argument `packet` is a Pkt containing the newly arrived packet.
     def input(self, packet):
-        trace('Entity A: Got packet from layer 3')
-
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
-        if packet.checksum != sum:
-            trace('Entity A: Packet checksum failed')
+
+        if (packet.acknum != self.ack) or (packet.checksum != sum):
             return
 
-        if packet.acknum != self.seqnum:
-            trace(f'Entity A: Recieved out-of-order packet, ACK of {packet.acknum} expected {self.seqnum}')
-            return
-        
-        trace('Entity A: Packet is good, stopping timer')
         stop_timer(self)
-
-        self.seqnum += 1
-
-        if self.seqnum > self.seqnum_upper_bound:
-            self.seqnum = self.seqnum_lower_bound
-
+        self.wait = True
+        self.ack += 1
+        if self.ack > self.limit:
+            self.ack = 0
 
     # Called when A's timer goes off.
     def timer_interrupt(self):
-        trace('Entity A: Timer interrupt!!')
-        trace('Entity A: Resending packet')
-        to_layer3(self, self.packet)
+        to_layer3(self, self.last_packet)
+        start_timer(self, self.timeout)
 
-        trace('Entity A: Starting timer')
-        start_timer(self, 10.0) 
+        
 
 class EntityB:
     # The following method will be called once (only) before any other
@@ -167,51 +156,32 @@ class EntityB:
     #
     # See comment for the meaning of seqnum_limit.
     def __init__(self, seqnum_limit):
-        self.acknum = 0
-        # lower/upper limits of seqnums (inclusive)
-        self.seqnum_lower_bound = 0
-        self.seqnum_upper_bound = seqnum_limit - 1 
+        self.limit = seqnum_limit - 1
+        self.ack = 0
 
     # Called from layer 3, when a packet arrives for layer 4 at EntityB.
     # The argument `packet` is a Pkt containing the newly arrived packet.
     def input(self, packet):
-        trace('Entity B: Got a packet from layer 3')
-
-        seqnum = 0
-        msg = bytes(Msg.MSG_SIZE)
-        sum_to_send = checksum(seqnum, self.acknum, msg) 
-        packet_to_send = Pkt(0, self.acknum, sum_to_send, msg)
-
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
-        if sum != packet.checksum:
-            trace('Entity B: Packet checksum failed')
-
-            trace(f'Entity B: Resending ACK {self.acknum} to layer 3')
-            to_layer3(self, packet_to_send)
+        if (packet.seqnum != self.ack) or (packet.checksum != sum):
+            msg = bytes(Msg.MSG_SIZE)
+            sum = checksum(0, self.ack, msg)
+            to_layer3(self, Pkt(0, self.ack, sum, msg))
             return
-
-        if self.acknum != packet.seqnum:
-            trace('Entity B: Recieved out-of-order packet')
-            trace(f'Entity B: ACK of {self.acknum} expected {packet.seqnum}')
-            #trace(f'Entity B: Resending ACK {self.acknum} to Entity A')
-
-            to_layer3(self, packet_to_send)
-            return
-
-
-        trace('Entity B: Packet is good')
-        trace('Entity B: Sending message to layer 5')
+        
         to_layer5(self, Msg(packet.payload))
 
-        trace(f'Entity B: Sending ACK {self.acknum} to layer 3')
-        to_layer3(self, packet_to_send)
+        msg = bytes(Msg.MSG_SIZE)
 
-        self.acknum += 1
+        sum = checksum(0, self.ack, msg)
+        to_layer3(self, Pkt(0, self.ack, sum,  msg))   
+        self.ack = self.next_ack()
 
-        if self.acknum > self.seqnum_upper_bound:
-            self.acknum = self.seqnum_lower_bound
-
-
+    def next_ack(self):
+        next = self.ack + 1
+        if next > self.limit:
+            next = 0
+        return next
 
     # Called when B's timer goes off.
     def timer_interrupt(self):
@@ -236,15 +206,12 @@ class EntityB:
 ##   to_layer3(self, Pkt(...)) # Construct a Pkt and send it to layer3.
 ##
 ## ****************************************************************************
-def checksum(seqnum, acknum, message):
-    sum = seqnum + acknum 
-    for i in range(0, Msg.MSG_SIZE):
-        sum += int(message[i])
-    return sum
 
-def trace(msg):
-    if TRACE > 0:
-        print(msg)
+def checksum(seqnum, acknum, msg):
+    sum = seqnum + acknum
+    for i in range(0, Msg.MSG_SIZE):
+        sum += int(msg[i])
+    return sum
 
 def start_timer(calling_entity, increment):
     the_sim.start_timer(calling_entity, increment)
