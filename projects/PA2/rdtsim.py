@@ -108,9 +108,9 @@ class EntityA:
     def __init__(self, seqnum_limit):
         self.limit = seqnum_limit - 1
         self.buffer = []
-        self.seq = 0
-        self.ack = 0
-        self.timeout = 10
+        self.current_seq = 0
+        self.current_ack = 0
+        self.timeout = 12
         self.last_packet = None
 
         self.waiting_for_ack = False
@@ -118,32 +118,32 @@ class EntityA:
     # Called from layer 5, passed the data to be sent to other side.
     # The argument `message` is a Msg containing the data to be sent.
     def output(self, message):
+        trace(f'A: got a message, {str(self.waiting_for_ack)}')
+        # if not done with a packet, queue it
         if self.waiting_for_ack:
-            trace(f'A: adding message to buffer of size {len(self.buffer)}')
             self.buffer.append(message)
+            trace(f'A: queued up a message {message.__str__()}, buffer size is {len(self.buffer)}')
             return
 
-        msg = message.data        
-
         if len(self.buffer) > 0:
+            self.buffer.append(message)
             self.send_from_buffer()
             return
 
-        trace('A: creating packet')
-        sum = checksum(self.seq, 0, msg)
-        packet = Pkt(self.seq, 0, sum, msg)
-        self.last_packet = packet
-        trace(f'A: sent packet with seqnum {self.seq}')
-        to_layer3(self, packet)
-        trace('A: starting timer')
-        start_timer(self, self.timeout)
+        msg = message.data
+        seq = self.current_seq
+        sum = checksum(seq, 0, msg)
+        pkt = Pkt(seq, 0, sum, msg)
+        self.last_packet = pkt
 
-        trace(f'A: waiting for ack {self.ack}')
+        trace(f'A: sent a packet {pkt.__str__()}')
+        to_layer3(self, pkt)
+        trace(f'A: started timer')
+        start_timer(self, self.timeout)   
+
+        trace(f'A: waiting for ack {self.current_ack}')
         self.waiting_for_ack = True
-        self.seq += 1
 
-        if self.seq > self.limit:
-            self.seq = 0
 
     # Called from layer 3, when a packet arrives for layer 4 at EntityA.
     # The argument `packet` is a Pkt containing the newly arrived packet.
@@ -152,50 +152,56 @@ class EntityA:
             if len(self.buffer) > 0:
                 self.send_from_buffer()
             return
-
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
 
-        if (packet.acknum != self.ack) or (packet.checksum != sum):
-            trace('A: bad packet')
-            trace(f'A: acknum of packet was {packet.acknum} expected {self.ack}')
-            trace(f'A: checksum of packet was {packet.checksum} expected {sum}')
+        if sum != packet.checksum:
+            trace(f'A: packet checksum is {packet.checksum}, expected {sum}')
             return
 
-        trace(f'A: good packet, got ack {packet.acknum}')
+        if self.current_ack != packet.acknum:
+            trace(f'A: got packet ack {packet.acknum}, expected {self.current_ack}')
+            return
+
+        trace('A: packet good, stopping timer')
         stop_timer(self)
-        trace('A: done waiting for ack')
         self.waiting_for_ack = False
-        self.ack += 1
-        if self.ack > self.limit:
-            self.ack = 0
+
+        self.current_ack = self.next_ack() 
+        self.current_seq = self.current_ack
 
 
     # Called when A's timer goes off.
     def timer_interrupt(self):
         trace('A: timer interupt!')
+
         trace(f'A: resending packet with seqnum {self.last_packet.seqnum}')
         to_layer3(self, self.last_packet)
+
         trace('A: starting timer')
         start_timer(self, self.timeout)
 
     def send_from_buffer(self):
-        trace('A: sending message from buffer')
         msg = self.buffer.pop(0).data
-        sum = checksum(self.seq, 0, msg)
-        packet = Pkt(self.seq, 0, sum, msg)
+        trace(f'A: sending message from buffer, buffer size is {len(self.buffer)}')
+
+        sum = checksum(self.current_seq, 0, msg)
+        packet = Pkt(self.current_seq, 0, sum, msg)
         self.last_packet = packet
 
-        trace(f'A: sent packet with seqnum {packet.seqnum}')
+        trace(f'A: sent a packet {packet.__str__()}')
         to_layer3(self, packet)
         trace('A: starting timer')
         start_timer(self, self.timeout)
 
-        trace(f'A: waiting for ack {self.ack}')
+        trace(f'A: waiting for ack {self.current_ack}')
         self.waiting_for_ack = True
-        self.seq += 1
 
-        if self.seq > self.limit:
-            self.seq = 0
+
+    def next_ack(self):
+        next = self.current_ack + 1
+        if next > self.limit:
+            next = 0
+        return next
 
         
 
@@ -206,45 +212,53 @@ class EntityB:
     # See comment for the meaning of seqnum_limit.
     def __init__(self, seqnum_limit):
         self.limit = seqnum_limit - 1
-        self.ack = 0
-        self.prev_ack = 0
+        self.current_ack = 0
 
     # Called from layer 3, when a packet arrives for layer 4 at EntityB.
     # The argument `packet` is a Pkt containing the newly arrived packet.
     def input(self, packet):
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
-        if (packet.seqnum != self.ack) or (packet.checksum != sum):
-            trace(f'B: bad packet')
-            trace(f'B: seqnum of packet was {packet.seqnum} expected {self.ack}')
-            trace(f'B: checksum of packet was {packet.checksum} expected {sum}')
-            ack = self.ack
-            if (packet.seqnum != self.ack) and (packet.checksum == sum):
-                ack = self.prev_ack
-                #self.prev_ack = self.ack
-                #self.ack = self.next_ack()
-            msg = bytes(Msg.MSG_SIZE)
-            sum = checksum(0, ack, msg)
-            trace(f'B: resending ack {ack}')
-            to_layer3(self, Pkt(0, ack, sum, msg))
+
+        if sum != packet.checksum:
+            trace(f'B: packet checksum is {packet.checksum}, expected {sum}')
+            ack = self.prev_ack(self.current_ack)
+            trace(f'B: resent  ack {ack}')
+            self.send_ack(ack)
             return
-        
-        trace(f'B: good packet, got seqnum {packet.seqnum}')
-        trace(f'B: sending to layer5')
+
+        if self.current_ack != packet.seqnum:
+            trace(f'B: got packet seq {packet.seqnum}, expected {self.current_ack}')
+            ack = self.prev_ack(self.current_ack)
+            trace(f'B: resent  ack {ack}')
+            self.send_ack(ack)
+            return
+
         to_layer5(self, Msg(packet.payload))
+        self.send_ack(self.current_ack)
+        trace(f'B: sent ack {self.current_ack}')
 
-        msg = bytes(Msg.MSG_SIZE)
+        self.current_ack = self.next_ack()
+        trace(f'B: next ack should be {self.current_ack}')
 
-        trace(f'B: sending ack {self.ack}')
-        sum = checksum(0, self.ack, msg)
-        to_layer3(self, Pkt(0, self.ack, sum,  msg))   
-        self.prev_ack = self.ack
-        self.ack = self.next_ack()
+
+
+    def prev_ack(self, ack):
+        prev = ack - 1
+        if prev < 0:
+            prev = self.limit
+        return prev
 
     def next_ack(self):
-        next = self.ack + 1
+        next = self.current_ack + 1
         if next > self.limit:
             next = 0
         return next
+
+    def send_ack(self, ack):
+        msg = bytes(Msg.MSG_SIZE)
+        sum = checksum(0, ack, msg)
+        pkt = Pkt(0, ack, sum, msg)
+        to_layer3(self, pkt)
 
     # Called when B's timer goes off.
     def timer_interrupt(self):
