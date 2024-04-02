@@ -118,7 +118,7 @@ class EntityA:
     # Called from layer 5, passed the data to be sent to other side.
     # The argument `message` is a Msg containing the data to be sent.
     def output(self, message):
-        trace(f'A: got a message, {str(self.waiting_for_ack)}')
+        #trace(f'A: got a message, {str(self.waiting_for_ack)}')
         # if not done with a packet, queue it
         if self.waiting_for_ack:
             self.buffer.append(message)
@@ -152,6 +152,7 @@ class EntityA:
             if len(self.buffer) > 0:
                 self.send_from_buffer()
             return
+
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
 
         if sum != packet.checksum:
@@ -168,6 +169,10 @@ class EntityA:
 
         self.current_ack = self.next_ack() 
         self.current_seq = self.current_ack
+
+        if len(self.buffer) > 0:
+            self.send_from_buffer()
+        return
 
 
     # Called when A's timer goes off.
