@@ -1,0 +1,32 @@
+Possible question "suppose you have an RRT of x and a transmission rate of y,
+with packets of b bits. How many packets you need to reach saturation in the
+network?"
+
+Possible Topics:
+- HTTP
+- Headers
+- Carriage Return
+- HTTP Transport Protocol (TCP)
+- TCP
+    Checksum for packet corruptions
+    Timeouts and Triple Ack for packet loss
+    Sequence numbers for duplicate packets
+    Ack for stopping transmissions
+- Flow Control
+- Congestion window
+- Handshake SYN, ACK, SYN-ACK
+- DNS (UDP)
+- HTTP sockets
+- Internet Sections (T1, ISP)
+- TCP
+- Pipe-lining HTTP1
+- Head-of-line blocking
+- HTTP2 Performance
+- UDP vs TCP
+- DNS servers
+- State machine
+- Triple dup ack and timeouts
+- slow start, ...
+- Delays queing, propagation, tranmission, ..
+- Trace Route
+- SMTP

@@ -1,0 +1,183 @@
+* Chapter 3
+Finishing Chapter 3 on Wednesday 2/14
+
+OS is labeling the packets (packet 0, packet 100, ...)
+                        (packet 0 sends 100 bytes then next packet is 0 + 100)
+** Topics
+- TCP Segment Structure
+- Flow Control
+- Congestion control
+** Midterm Advice
+- *TCP is the biggest*
+- Homework 3 is helpful for the midterm!!!!
+- "Means TCP detects loss??"
+
+
+** 3.1 - Introduction and Transport-Layer Services
+Transport-layer protocol provides for *logical communication* between
+application processes on different hosts.
+
+=Logical Communication=: As if the applications were directly connected, even if
+they are far apart.
+*** Relationship between Network-Layer and Transport-layer
+/Transport is just above the Network-Layer./
+
+Application
+    \downarrow
+ ~Transport~
+    \downarrow
+  Network
+    \downarrow
+   Link
+    \downarrow
+  Physical
+
+Like the Transports role of having a logical communication between
+applications, the Network-Layer's role it to have a logical communication
+between hosts.
+
+*** Overview of Transport-Layer in the Internet
+Internet has two distinct transport-layer protocols available to applications,
+UDP (User Datagram Protocol) and TCP (Transmission Control Protocol).
+
+UDP is connection-less and unreliable, but fast.
+TCP is connection based and reliable, but slow.
+
+Transport-Layer packets are known as =segments=. (Sometimes people refer to UDP
+packets as =Datagrams=)
+
+Some of the key services provided by UDP/TCP is to extend IP's delivery service
+between two processes on two end systems.
+
+The extending from host-to-host delivery to process-to-process is called
+=transport-layer multiplexing/demultiplexing=.
+
+Also provides error checking for checking integrity of segments.
+
+/Note: Error checking and transport-layer (de/mu)ltiplexing are the only two
+services provided by UDP/
+
+TCP provides those two services and more. It provides =reliable data transfer=, it
+does this by using flow control, sequence numbers, and acknowledgments and
+timers. This converts IP's unreliable services to something reliable. Also
+provides =congestion control=
+
+**** A Little on Network-Layer Protocol
+The network-layer protocol is called =IP= (Internet Protocol). It is a =best-effort
+delivery service=, in that is does it best to deliver segments between
+communication hosts, but makes no guarantees. It doesn't guarantee delivery,
+integrity, or order of the segments being sent, for these reasons IP is known to be a
+=unreliable service=.
+
+Each host has an IP address.
+
+** 3.2 Multiplexing and Demultiplexing
+Job of delivering an incoming segment to the correct socket is called
+=demultiplexing=.
+
+The job of gathering data chunks at the source host from different sockets,
+encapsulating each data chunk with header information to create segments and
+passing the segments to the network layer is called =multiplexing=.
+
+For multiplexing, it requires
+    1. sockets have unique identifiers
+    2. each segment have special fields to indicate the socket to identifiers
+
+The special fields to indicate which socket to deliver a segment are
+=source port number field= and =destination port number field=.
+Each port number is a 16-bit number (0 to 65535). The port numbers from 0 to
+1023 are called =well-known port numbers=. These port numbers are restricted to
+well known application protocols (like HTTP or FTP).
+
+*** Connection-Less Multiplexing/Demultiplexing
+UDP uses a two-tuple of (ip, port) to be able to identify a socket. If a host A
+want's to send a segment (multiplexing). It makes a segment with a source and
+destination port number. Host B then takes the destination port number to send
+it to the appropriate socket (demultiplexing). The source is their incase host B
+wants to send a segment back.
+
+*** Connection-Oriented Multiplexing/Demultiplexing
+TCP socket has a four-tuple of (source IP, source port, dest. IP, dest. port). Thus a
+TCP connection uses all four values to demultiplex.
+
+** 3.3 Connection-less Transport: UDP
+UDP segments may be lost or delivered out of order.
+
+Connection-less no handshake between sender/receiver
+
+Each segment handled independently
+
+
+             UDP segment header
+|----------------------------+-------------|
+| source port #              | dest port # |
+|----------------------------+-------------|
+| length                     | checksum    |
+|----------------------------+-------------|
+| Application Data (payload) |             |
+|----------------------------+-------------|
+
+UDP checksum is to detect errors in a transmitted segment
+
+Sender treats contents of UDP segment as a sequence of 16-bit numbers.  The
+checksum is the one's complement sum of the content. That is the value put into
+the checksum field above.
+
+Receiver computes the checksum that same way then checks if it equals the
+checksum field.
+
+This checksum isn't perfect
+
+*** One's Complement Sum
+    1 0 1 0 0 1 1 0
+  + 0 1 1 1 0 0 1 1
+    ---------------
+  1 0 0 0 1 1 0 0 1
+  ^-- if we get a carry we have to wrap around and add it
+
+  1 0 0 0 1 1 0 0 1
++ 0 0 0 0 0 0 0 0 1
+  -----------------
+  1 0 0 0 1 1 0 1 0
+
+last step is flip (one's complement)
+  0 1 1 1 0 0 1 0 1 <- this is the checksum
+
+** 3.4 Principles of Reliable Data Transfer
+=Acknowledgements (ACKs)=: Receiver explicitly tells sender that pkt recieved OK
+=Negative Acknowledgements (NAKs)=: Receiver explicitly tells sender that pkt had errors
+
+Pipelining: sender sends multiple, yet to be ack, packets. This requries bigger
+sequence numbers and buffers
+
+Go-Back-N:
+    Sender: window of up to N, consecutive transmitted but unACKed pkts. With a
+    k-bit sequence number field.
+
+
+
+** 3.5 Connection-Oriented Transport: TCP
+- Acts as point-to-point (one sender - one reciever)
+- Reliable, in-order byte stream
+- Full duplex data (bi-directional data flow)
+- MSS: Maximum Segment Size
+- Cumulative ACKs
+- Pipelining
+- Connection-Oriented
+- Flow Controlled
+
+
+TCP round trip time (RTT), timeout
+$EstimatedRTT = (1 - \alpha) * EstimatedRTT + \alpha * SampleRTT$
+$\alpha$ typically = 0.125
+
+** 3.7 Congestion Control
+=Additive Increase=: Increase the sending rate by 1 maximum segment (MSS) every
+RTT until loss is detected.
+
+=Multiplicative Decrease=: Cut sending rate in half at each loss event.
+
+This multiplicative decrease happens when a triple duplicate ACK (TPC Reno)
+It cuts to 1 MSS when loss detected by timeout (TCP Tahoe)
+
+=Slow start=: start by sending 1, 2, 4, 8, ... packets until a ssthresh is passed
