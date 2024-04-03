@@ -1,0 +1,372 @@
+
+% preamble --------------------------
+\documentclass{article}
+
+% Packages
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath,amsthm,enumitem}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[a4paper, total={6in, 8in}, margin=1.0in]{geometry}
+% Information
+\title{PA2 - Alternating-Bit Protocol}
+\date{April 02, 2024}
+\author{Eduardo Valdivia}
+
+\graphicspath{{./}}
+% preamble end --------------------------
+
+% document -----------------
+\begin{document}
+\maketitle
+\section{Design}
+The approach when designing both classes was to implement the Alternating-Bit
+Protocol, also known as rdt3.0. When implemented right, it would allow for
+reliable data transfer that can handle corruption and lost packets. \\
+
+\noindent Some helper methods available to both classes are \texttt{checksum}
+and \texttt{trace}. The method \texttt{checksum} takes in ack \#, seq \#, and
+message. All it does is add the ack and seq \#, and the message (each byte as an
+int). This is used to create a checksum and check if packets are corrupt. The method \texttt{trace} is just a wrapper around \texttt{print} that checks the trace level before printing.
+
+\subsection{Entity A}
+This class has many instance variables:
+\begin{itemize}
+\item \texttt{limit:} holds the upper limit of seqnum
+\item \texttt{buffer:} buffer of queued up messages
+\item \texttt{current\_ack:} the ack \# expected to receive
+\item \texttt{current\_seq:} the seq \# to send
+\item \texttt{timeout:} the timeout length
+\item \texttt{last\_packet:} the last packet sent
+\item \texttt{waiting\_for\_ack:} bool that states if a packet is in transit
+\end{itemize}
+When a message arrives from layer 5 in \texttt{output()}, it first checks if a
+packet is already in transit. If a packet is already in transit add the incoming
+message to the buffer. If not, send the next in-order packet by checking if we
+have any messages in the queue and start the timer for a timeout. \\
+
+\noindent When a packet arrives from layer 3 in \texttt{input()}, we first check
+if the validity of the packet. If the packet is either corrupt or out-of-order,
+we will do nothing and return early. If the packet is good, we will stop the
+timer, set the state of \texttt{waiting\_for\_ack} to reflect we are not waiting
+for an ack anymore, set \texttt{current\_seq} to the next seqnum and if the queue has waiting packets, send the next in-order
+packet. \\
+
+\noindent When a timeout occurs, we will resend the last packet sent from \texttt{last\_packet} and restart the timer. \\
+
+\noindent This class also has helper methods \texttt{next\_ack} and
+\texttt{send\_from\_buffer}, which helps get the next valid seq/ack \# and send
+a message from the buffer.
+
+\subsection{Entity B}
+This class has some instance variables:
+\begin{itemize}
+\item \texttt{limit:} holds the upper limit of seqnum
+\item \texttt{current\_ack:} the ack \# to send
+\end{itemize}
+\noindent When a message arrives from layer 3, it first checks the validity of the
+incoming packet. If it is either corrupt or out-of-order, it will simply resend
+the previous ack (\texttt{current\_ack - 1}). If the packet is good, we will
+send the packet payload out to layer 5, send out an ack, and increment
+\texttt{current\_ack}. \\
+
+\noindent This class also has helper methods \texttt{next\_ack}, \texttt{prev\_ack}, and
+\texttt{send\_ack}. These methods help get the next and previous ack and send out acks.
+
+\section{Testing}
+During testing, running a configuration with low avg. time like: \\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 10 -l 0.0 -c 0.0 -v 1}
+\\\\
+\noindent exposed the problems I had with sending packets in-order because I was
+forgetting to add the messsage to the queue in \texttt{input()}. \\
+
+\noindent Running a configuration with corruption and loss like: \\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 100 -l 0.1 -c 0.1 -v 1}
+\\\\
+\noindent exposed the problems I had with Entity B, not sending the correct ack
+\# when a packet was out-of-order or corrupted. This lead to me making the
+\texttt{prev\_ack} helper method.
+\section{Output}
+Output of run to 10 acked packages:
+
+\newcommand{\an}[1]{\hspace*{10mm} \textcolor{red}{#1}}
+\texttt{\\1 SIMULATION CONFIGURATION\\
+2 --------------------------------------\\
+3 (-n) \# layer5 msgs to be provided:      12\\
+4 (-d) avg layer5 msg interarrival time:  10.0\\
+5 (-z) transport protocol seqnum limit:   2\\
+6 (-l) layer3 packet loss prob:           0.05\\
+7 (-c) layer3 packet corruption prob:     0.05\\
+8 (-s) simulation random seed:            1712085143688875133\\
+9 --------------------------------------\\
+10\\
+11 ===== SIMULATION BEGINS\\
+12 A: sent a packet Pkt(seqnum=0, acknum=0, checksum=1940, payload=b'aaaaaaaaaaaaaaaaaaaa')\\
+13           \hspace*{10mm} TO\_LAYER3: packet being lost\\
+14 A: started timer\\
+15 A: waiting for ack 0\\
+\an{start of a timer interupt here}\\
+16 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+17 A: resending packet with seqnum 0\\
+18 A: starting timer\\
+19 A: queued up a message Msg(data=b'bbbbbbbbbbbbbbbbbbbb'), buffer size is 1\\
+20 B: sent ack 0\\
+21 B: next ack should be 1\\
+\an{start of a timer interupt here}\\
+22 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+23 A: resending packet with seqnum 0\\
+24 A: starting timer\\
+25 A: queued up a message Msg(data=b'cccccccccccccccccccc'), buffer size is 2\\
+26 B: got packet seq 0, expected 1\\
+27 B: resent  ack 0\\
+\an{ack 1}\\
+28 A: packet good, stopping timer\\
+29 A: sending message from buffer, buffer size is 1\\
+30 A: sent a packet Pkt(seqnum=1, acknum=0, checksum=1961, payload=b'bbbbbbbbbbbbbbbbbbbb')\\
+31 A: starting timer\\
+32 A: waiting for ack 1\\
+33 A: queued up a message Msg(data=b'dddddddddddddddddddd'), buffer size is 2\\
+34 B: sent ack 1\\
+35 B: next ack should be 0\\
+36 A: got packet ack 0, expected 1\\
+37 A: queued up a message Msg(data=b'eeeeeeeeeeeeeeeeeeee'), buffer size is 3\\
+\an{ack 2}\\
+38 A: packet good, stopping timer\\
+39 A: sending message from buffer, buffer size is 2\\
+40 A: sent a packet Pkt(seqnum=0, acknum=0, checksum=1980, payload=b'cccccccccccccccccccc')\\
+41 A: starting timer\\
+42 A: waiting for ack 0\\
+43 B: sent ack 0\\
+44 B: next ack should be 1\\
+\an{ack 3}\\
+45 A: packet good, stopping timer\\
+46 A: sending message from buffer, buffer size is 1\\
+47 A: sent a packet Pkt(seqnum=1, acknum=0, checksum=2001, payload=b'dddddddddddddddddddd')\\
+48 A: starting timer\\
+49 A: waiting for ack 1\\
+50 A: queued up a message Msg(data=b'ffffffffffffffffffff'), buffer size is 2\\
+51 B: sent ack 1\\
+52 B: next ack should be 0\\
+\an{start of a timer interupt here}\\
+53 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+54 A: resending packet with seqnum 1\\
+55 A: starting timer\\
+\an{ack 4}\\
+56 A: packet good, stopping timer\\
+57 A: sending message from buffer, buffer size is 1\\
+58 A: sent a packet Pkt(seqnum=0, acknum=0, checksum=2020, payload=b'eeeeeeeeeeeeeeeeeeee')\\
+59 A: starting timer\\
+60 A: waiting for ack 0\\
+61 A: queued up a message Msg(data=b'gggggggggggggggggggg'), buffer size is 2\\
+62 B: got packet seq 1, expected 0\\
+63 B: resent  ack 1\\
+64 B: sent ack 0\\
+65 B: next ack should be 1\\
+\an{start of a timer interupt here}\\
+66 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+67 A: resending packet with seqnum 0\\
+68 A: starting timer\\
+69 A: got packet ack 1, expected 0\\
+70 B: got packet seq 0, expected 1\\
+71 B: resent  ack 0\\
+\an{ack 5}\\
+72 A: packet good, stopping timer\\
+73 A: sending message from buffer, buffer size is 1\\
+74 A: sent a packet Pkt(seqnum=1, acknum=0, checksum=2041, payload=b'ffffffffffffffffffff')\\
+75 A: starting timer\\
+76 A: waiting for ack 1\\
+77 A: queued up a message Msg(data=b'hhhhhhhhhhhhhhhhhhhh'), buffer size is 2\\
+78 A: got packet ack 0, expected 1\\
+79 B: sent ack 1\\
+80 B: next ack should be 0\\
+\an{ack 6}\\
+81 A: packet good, stopping timer\\
+82 A: sending message from buffer, buffer size is 1\\
+83 A: sent a packet Pkt(seqnum=0, acknum=0, checksum=2060, payload=b'gggggggggggggggggggg')\\
+84 A: starting timer\\
+85 A: waiting for ack 0\\
+86 B: sent ack 0\\
+87 B: next ack should be 1\\
+\an{ack 7}\\
+88 A: packet good, stopping timer\\
+89 A: sending message from buffer, buffer size is 0\\
+90 A: sent a packet Pkt(seqnum=1, acknum=0, checksum=2081, payload=b'hhhhhhhhhhhhhhhhhhhh')\\
+91 A: starting timer\\
+92 A: waiting for ack 1\\
+93 B: sent ack 1\\
+94 B: next ack should be 0\\
+95 A: queued up a message Msg(data=b'iiiiiiiiiiiiiiiiiiii'), buffer size is 1\\
+\an{ack 8}\\
+96 A: packet good, stopping timer\\
+97 A: sending message from buffer, buffer size is 0\\
+98 A: sent a packet Pkt(seqnum=0, acknum=0, checksum=2100, payload=b'iiiiiiiiiiiiiiiiiiii')\\
+\an{packet is going to be corrupted here}\\
+99           \hspace*{10mm} TO\_LAYER3: packet being corrupted\\
+100 A: starting timer\\
+101 A: waiting for ack 0\\
+102 A: queued up a message Msg(data=b'jjjjjjjjjjjjjjjjjjjj'), buffer size is 1\\
+\an{B finds out packet is bad}\\
+103 B: packet checksum is 2100, expected 2085\\
+\an{B sends back the previous ack to fix the corruption}\\
+104 B: resent  ack 1\\
+\an{start of a timer interupt here}\\
+105 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+106 A: resending packet with seqnum 0\\
+107 A: starting timer\\
+108 A: got packet ack 1, expected 0\\
+109 A: queued up a message Msg(data=b'kkkkkkkkkkkkkkkkkkkk'), buffer size is 2\\
+110 B: sent ack 0\\
+111 B: next ack should be 1\\
+\an{start of a timer interupt here}\\
+112 A: timer interupt!\\
+\an{A is resending the packet to fix the interrupt}\\
+113 A: resending packet with seqnum 0\\
+114 A: starting timer\\
+\an{ack 9}\\
+115 A: packet good, stopping timer\\
+116 A: sending message from buffer, buffer size is 1\\
+117 A: sent a packet Pkt(seqnum=1, acknum=0, checksum=2121, payload=b'jjjjjjjjjjjjjjjjjjjj')\\
+\an{packet is going to be lost here}\\
+118           \hspace*{10mm} TO\_LAYER3: packet being lost\\
+119 A: starting timer\\
+120 A: waiting for ack 1\\
+121 A: queued up a message Msg(data=b'llllllllllllllllllll'), buffer size is 2\\
+122 ===== SIMULATION ENDS\\
+123\\
+124 SIMULATION SUMMARY\\
+125 --------------------------------\\
+126 \# layer5 msgs provided to A:      12\\
+127 \# elapsed time units:             135.26757669561312\\
+128\\
+129 \# layer3 packets sent by A:       16\\
+130 \# layer3 packets sent by B:       13\\
+131 \# layer3 packets lost:            2\\
+132 \# layer3 packets corrupted:       1\\
+133 \# layer5 msgs delivered by A:     0\\
+134 \# layer5 msgs delivered by B:     9\\
+135 \# layer5 msgs by B/elapsed time:  0.06653479141015675\\
+136 --------------------------------\\
+}\\
+\subsection{Statistics of run with high loss probability only}
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 10 -l 0.1 -c 0.0 -v 0}
+\texttt{\\\\1 SIMULATION CONFIGURATION\\
+2 --------------------------------------\\
+3 (-n) \# layer5 msgs to be provided:      1000\\
+4 (-d) avg layer5 msg interarrival time:  10.0\\
+5 (-z) transport protocol seqnum limit:   2\\
+6 (-l) layer3 packet loss prob:           0.1\\
+7 (-c) layer3 packet corruption prob:     0.0\\
+8 (-s) simulation random seed:            1712087309368015349\\
+9 --------------------------------------\\
+10 \\
+11 SIMULATION SUMMARY\\
+12 --------------------------------\\
+13 \# layer5 msgs provided to A:      1000\\
+14 \# elapsed time units:             9990.264648949254\\
+15 \\
+16 \# layer3 packets sent by A:       1164\\
+17 \# layer3 packets sent by B:       1023\\
+18 \# layer3 packets lost:            252\\
+19 \# layer3 packets corrupted:       0\\
+20 \# layer5 msgs delivered by A:     0\\
+21 \# layer5 msgs delivered by B:     698\\
+22 \# layer5 msgs by B/elapsed time:  0.06986801896918853\\
+23 --------------------------------\\}
+\\ This shows that we are delivering more than half of the received messages.
+This might look good, but we should be delivering more since layer3 only lost
+252 packets. This could be due to a bad timeout value (should probably have it
+be a little higher). You can also argue this is to be expected with a low avg. between messages sent (we will see runs with higher averages later).
+\\\\
+\subsection{Statistics of run with high corruption probability only}
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 10 -l 0.0 -c 0.1 -v 0}
+\texttt{\\1 SIMULATION CONFIGURATION\\
+2 --------------------------------------\\
+3 (-n) \# layer5 msgs to be provided:      1000\\
+4 (-d) avg layer5 msg interarrival time:  10.0\\
+5 (-z) transport protocol seqnum limit:   2\\
+6 (-l) layer3 packet loss prob:           0.0\\
+7 (-c) layer3 packet corruption prob:     0.1\\
+8 (-s) simulation random seed:            1712087309449474195\\
+9 --------------------------------------\\
+10 \\
+11 SIMULATION SUMMARY\\
+12 --------------------------------\\
+13 \# layer5 msgs provided to A:      1000\\
+14 \# elapsed time units:             10127.554352250712\\
+15 \\
+16 \# layer3 packets sent by A:       1187\\
+17 \# layer3 packets sent by B:       1187\\
+18 \# layer3 packets lost:            0\\
+19 \# layer3 packets corrupted:       227\\
+20 \# layer5 msgs delivered by A:     0\\
+21 \# layer5 msgs delivered by B:     708\\
+22 \# layer5 msgs by B/elapsed time:  0.0699082893435824\\
+23 --------------------------------\\}
+\\ This is a little better than the last one, but still not optimal since we
+only lost 227 packets. My guess it's the static timeout value the this solution
+has (might get better result with a timeout design like TCP Reno).
+\\\\
+\subsection{Statistics of run with higher corruption probability and avg. time between msg}
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 100 -l 0.05 -c 0.1 -v 0}
+\texttt{\\\\1 SIMULATION CONFIGURATION\\
+2 --------------------------------------\\
+3 (-n) \# layer5 msgs to be provided:      1000\\
+4 (-d) avg layer5 msg interarrival time:  100.0\\
+5 (-z) transport protocol seqnum limit:   2\\
+6 (-l) layer3 packet loss prob:           0.05\\
+7 (-c) layer3 packet corruption prob:     0.1\\
+8 (-s) simulation random seed:            1712088286965552882\\
+9 --------------------------------------\\
+10\\
+11 SIMULATION SUMMARY\\
+12 --------------------------------\\
+13 \# layer5 msgs provided to A:      1000\\
+14 \# elapsed time units:             101570.52695001883\\
+15\\
+16 \# layer3 packets sent by A:       1639\\
+17 \# layer3 packets sent by B:       1549\\
+18 \# layer3 packets lost:            161\\
+19 \# layer3 packets corrupted:       327\\
+20 \# layer5 msgs delivered by A:     0\\
+21 \# layer5 msgs delivered by B:     999\\
+22 \# layer5 msgs by B/elapsed time:  0.00983553034525056\\
+23 --------------------------------\\
+}
+\\With higher avg. time between messages we recover all packets lost/corrupted. This is to be excepted with rdt3.0.
+\\\\
+\subsection{Statistics of run with higher loss probability and avg. time between msg}
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 1000 -z 2 -d 100 -l 0.1 -c 0.05 -v 0}
+\texttt{\\\\1 SIMULATION CONFIGURATION\\
+2 --------------------------------------\\
+3 (-n) \# layer5 msgs to be provided:      1000\\
+4 (-d) avg layer5 msg interarrival time:  100.0\\
+5 (-z) transport protocol seqnum limit:   2\\
+6 (-l) layer3 packet loss prob:           0.1\\
+7 (-c) layer3 packet corruption prob:     0.05\\
+8 (-s) simulation random seed:            1712088287055115545\\
+9 --------------------------------------\\
+10 \\
+11 SIMULATION SUMMARY\\
+12 --------------------------------\\
+13 \# layer5 msgs provided to A:      1000\\
+14 \# elapsed time units:             99004.78776932895\\
+15 \\
+16 \# layer3 packets sent by A:       1598\\
+17 \# layer3 packets sent by B:       1460\\
+18 \# layer3 packets lost:            267\\
+19 \# layer3 packets corrupted:       140\\
+20 \# layer5 msgs delivered by A:     0\\
+21 \# layer5 msgs delivered by B:     999\\
+22 \# layer5 msgs by B/elapsed time:  0.010090421104962803\\
+23 --------------------------------\\
+}
+\\Same as the last one we recover all packets lost/corrupted. Might be safe to assume that a good timeout value is important.
+
+\end{document}
