@@ -148,11 +148,6 @@ class EntityA:
     # Called from layer 3, when a packet arrives for layer 4 at EntityA.
     # The argument `packet` is a Pkt containing the newly arrived packet.
     def input(self, packet):
-        if not self.waiting_for_ack:
-            if len(self.buffer) > 0:
-                self.send_from_buffer()
-            return
-
         sum = checksum(packet.seqnum, packet.acknum, packet.payload)
 
         if sum != packet.checksum:
@@ -201,14 +196,11 @@ class EntityA:
         trace(f'A: waiting for ack {self.current_ack}')
         self.waiting_for_ack = True
 
-
     def next_ack(self):
         next = self.current_ack + 1
         if next > self.limit:
             next = 0
         return next
-
-        
 
 class EntityB:
     # The following method will be called once (only) before any other
@@ -244,8 +236,6 @@ class EntityB:
 
         self.current_ack = self.next_ack()
         trace(f'B: next ack should be {self.current_ack}')
-
-
 
     def prev_ack(self, ack):
         prev = ack - 1
