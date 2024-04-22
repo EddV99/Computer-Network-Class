@@ -1,0 +1,582 @@
+
+% preamble --------------------------
+\documentclass{article}
+
+% Packages
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath,amsthm,enumitem}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[a4paper, total={6in, 8in}, margin=0.8in]{geometry}
+% Information
+\title{PA3 - Go Back-N Protocol}
+\date{April 22, 2024}
+\author{Eduardo Valdivia}
+
+\graphicspath{{./}}
+% preamble end --------------------------
+
+% document -----------------
+\begin{document}
+\maketitle
+\section{Design}
+
+\subsection{Entity A}
+This class has many instance variables:
+\begin{itemize}
+\item \texttt{base:} An index to the buffer. Start of the window.
+\item \texttt{window\_size:} The size of the window.
+\item \texttt{buffer:} A buffer where we store incoming messages. We hold all messages with corresponding sequence number together.
+\item \texttt{seq:} The seq \# to send.
+\item \texttt{index:} An index to the buffer. The next packet to send.
+\item \texttt{limit:} Max sequence number.
+\item \texttt{timeout:} The timeout length.
+\end{itemize}
+
+\noindent When an incoming message is sent A, it will store the message and
+corresponding sequence number together. This means the sequence number is always
+incremented when a message comes in! (incremented with max sequence number in
+mind) This is okay because \texttt{index} holds the index in \texttt{buffer} to
+the actual next message/seq to send. This makes it easy because \texttt{index}
+and \texttt{base} are always increasing and we don't have to deal with
+modulus/index math because of the sequence number limit. We also start the timer
+if no packets was in transit.\\
+
+
+\noindent When an ack comes in from B, A will check if the packet is corrupted
+first, if so we do nothing. If the packet is good we will check the window to
+find the index in the buffer to where the incoming ack num is. We need this
+index to set the new base of the window. After setting we check if sent packets
+haven't gotten an ack and we stop the timer if no packets and restart it if so.
+Also at the end of this method we check if we have window space and buffered
+messages and send more, this is done in the \texttt{send\_more} method. \\
+
+
+\noindent At timer interrupt we start the timer again and resend all packets in
+the window. \\
+
+
+\subsection{Entity B}
+This class has some instance variables:
+\begin{itemize}
+\item \texttt{limit:} Max sequence number.
+\item \texttt{expected\_seq:} The expected sequence number.
+\item \texttt{last\_ack:} The last ack sent.
+\end{itemize}
+
+\noindent When a packet comes in from A it first checks if the packet is not corrupt and if it has the expected sequence number. If not we resend the last ack to A. If the packet is good, we deliver the data and send an ack to A. We also increment the expected sequence number. \\
+
+\section{Testing}
+Testing for this assignment was usually through turning in to the auto-grader
+and copying the failing ones to a script, so I can easily run them locally. I
+would run them with trace level 1/2 and figure out what was wrong. I rewrote the
+classes many times, until I went with the approach described in class (a buffer
+that holds all packets). I knew my implementation was correct when I was
+improving on all the tests saved in the scripts. I had to improve the
+implementation once by using the trace to figure out why I was starting the
+timer when I shouldn't have and it was due to having a \texttt{>} instead of a
+\texttt{>=} when checking if any packets were in transit.
+
+\section{Output}
+Output of simulator using: \texttt{python3 rdtsim.py -n 25 -l 0.05 -c 0.05 -v 2}
+
+\newcommand{\an}[1]{\hspace*{10mm} \textcolor{red}{#1}}
+\texttt{\\1 SIMULATION CONFIGURATION \\
+2 -------------------------------------- \\
+3 (-n) \# layer5 msgs to be provided:      25 \\
+4 (-d) avg layer5 msg interarrival time:  10.0 \\
+5 (-z) transport protocol seqnum limit:   16 \\
+6 (-l) layer3 packet loss prob:           0.05 \\
+7 (-c) layer3 packet corruption prob:     0.05 \\
+8 (-s) simulation random seed:            1713765511385883076 \\
+9 -------------------------------------- \\
+10  \\
+11 ===== SIMULATION BEGINS \\
+12 A: got a message: Msg(data=b'aaaaaaaaaaaaaaaaaaaa') \\
+13 A: sent a packet to B Pkt(seqnum=0, acknum=0, checksum=1940,
+payload=b'aaaaaaaaaaaaaaaaaaaa') \\
+14 A: starting timer \\
+15 A: got a message: Msg(data=b'bbbbbbbbbbbbbbbbbbbb') \\
+16 A: sent a packet to B Pkt(seqnum=1, acknum=0, checksum=1961,
+payload=b'bbbbbbbbbbbbbbbbbbbb') \\
+17 B: delivered data! b'aaaaaaaaaaaaaaaaaaaa' \\
+18 B: sent ack Pkt(seqnum=0, acknum=0, checksum=0,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+19 B: delivered data! b'bbbbbbbbbbbbbbbbbbbb' \\
+20 B: sent ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+21 A: got a message: Msg(data=b'cccccccccccccccccccc') \\
+22 A: sent a packet to B Pkt(seqnum=2, acknum=0, checksum=1982,
+payload=b'cccccccccccccccccccc') \\
+23 A: got an ack Pkt(seqnum=0, acknum=0, checksum=0,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+24 A: restarting timer! \\
+25 A: got an ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+26 A: restarting timer! \\
+27 B: delivered data! b'cccccccccccccccccccc' \\
+28 B: sent ack Pkt(seqnum=0, acknum=2, checksum=2,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+29 A: got a message: Msg(data=b'dddddddddddddddddddd') \\
+30 A: sent a packet to B Pkt(seqnum=3, acknum=0, checksum=2003,
+payload=b'dddddddddddddddddddd') \\
+31 A: got a message: Msg(data=b'eeeeeeeeeeeeeeeeeeee') \\
+32 A: sent a packet to B Pkt(seqnum=4, acknum=0, checksum=2024,
+payload=b'eeeeeeeeeeeeeeeeeeee') \\
+33 A: got an ack Pkt(seqnum=0, acknum=2, checksum=2,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+34 A: restarting timer! \\
+35 B: delivered data! b'dddddddddddddddddddd' \\
+\an{Start of a packet being corrupted} \\
+36     \hspace*{10mm}      TO\_LAYER3: packet being corrupted \\
+37 B: sent ack Pkt(seqnum=0, acknum=3, checksum=3,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+\an{A successfully finds the corrupt packet, we just ignore it} \\
+38 A: got corrupt packet! \\
+39 A: got a message: Msg(data=b'ffffffffffffffffffff') \\
+40 A: sent a packet to B Pkt(seqnum=5, acknum=0, checksum=2045,
+payload=b'ffffffffffffffffffff') \\
+41 B: delivered data! b'eeeeeeeeeeeeeeeeeeee' \\
+\an{Highest in-order packet was acked back, we don't have to ack 3 again} \\
+42 B: sent ack Pkt(seqnum=0, acknum=4, checksum=4,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+43 B: delivered data! b'ffffffffffffffffffff' \\
+44 B: sent ack Pkt(seqnum=0, acknum=5, checksum=5,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+45 A: got a message: Msg(data=b'gggggggggggggggggggg') \\
+46 A: sent a packet to B Pkt(seqnum=6, acknum=0, checksum=2066,
+payload=b'gggggggggggggggggggg') \\
+47 A: got a message: Msg(data=b'hhhhhhhhhhhhhhhhhhhh') \\
+48 A: sent a packet to B Pkt(seqnum=7, acknum=0, checksum=2087,
+payload=b'hhhhhhhhhhhhhhhhhhhh') \\
+49 A: got an ack Pkt(seqnum=0, acknum=4, checksum=4,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+50 A: restarting timer! \\
+51 A: got a message: Msg(data=b'iiiiiiiiiiiiiiiiiiii') \\
+52 A: sent a packet to B Pkt(seqnum=8, acknum=0, checksum=2108,
+payload=b'iiiiiiiiiiiiiiiiiiii') \\
+53 B: delivered data! b'gggggggggggggggggggg' \\
+54 B: sent ack Pkt(seqnum=0, acknum=6, checksum=6,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+55 A: got a message: Msg(data=b'jjjjjjjjjjjjjjjjjjjj') \\
+56 A: sent a packet to B Pkt(seqnum=9, acknum=0, checksum=2129,
+payload=b'jjjjjjjjjjjjjjjjjjjj') \\
+57 A: got a message: Msg(data=b'kkkkkkkkkkkkkkkkkkkk') \\
+58 A: sent a packet to B Pkt(seqnum=10, acknum=0, checksum=2150,
+payload=b'kkkkkkkkkkkkkkkkkkkk') \\
+59 A: got an ack Pkt(seqnum=0, acknum=5, checksum=5,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+60 A: restarting timer! \\
+61 B: delivered data! b'hhhhhhhhhhhhhhhhhhhh' \\
+62 B: sent ack Pkt(seqnum=0, acknum=7, checksum=7,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+63 B: delivered data! b'iiiiiiiiiiiiiiiiiiii' \\
+64 B: sent ack Pkt(seqnum=0, acknum=8, checksum=8,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+65 B: delivered data! b'jjjjjjjjjjjjjjjjjjjj' \\
+66 B: sent ack Pkt(seqnum=0, acknum=9, checksum=9,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+67 A: got an ack Pkt(seqnum=0, acknum=6, checksum=6,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+68 A: restarting timer! \\
+69 B: delivered data! b'kkkkkkkkkkkkkkkkkkkk' \\
+\an{Start of a packet being corrupted} \\
+70     \hspace*{10mm}  TO\_LAYER3: packet being corrupted \\
+71 B: sent ack Pkt(seqnum=0, acknum=10, checksum=10,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+72 A: got an ack Pkt(seqnum=0, acknum=7, checksum=7,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+73 A: restarting timer! \\
+74 A: got a message: Msg(data=b'llllllllllllllllllll') \\
+75 A: sent a packet to B Pkt(seqnum=11, acknum=0, checksum=2171,
+payload=b'llllllllllllllllllll') \\
+76 A: got an ack Pkt(seqnum=0, acknum=8, checksum=8,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+77 A: restarting timer! \\
+78 A: got a message: Msg(data=b'mmmmmmmmmmmmmmmmmmmm') \\
+79 A: sent a packet to B Pkt(seqnum=12, acknum=0, checksum=2192,
+payload=b'mmmmmmmmmmmmmmmmmmmm') \\
+80 A: got an ack Pkt(seqnum=0, acknum=9, checksum=9,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+81 A: restarting timer! \\
+\an{A successfully finds the corrupt packet, we just ignore it} \\
+82 A: got corrupt packet! \\
+83 B: delivered data! b'llllllllllllllllllll' \\
+84 B: sent ack Pkt(seqnum=0, acknum=11, checksum=11,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+85 A: got an ack Pkt(seqnum=0, acknum=11, checksum=11,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+86 A: restarting timer! \\
+87 B: delivered data! b'mmmmmmmmmmmmmmmmmmmm' \\
+88 B: sent ack Pkt(seqnum=0, acknum=12, checksum=12,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+89 A: got a message: Msg(data=b'nnnnnnnnnnnnnnnnnnnn') \\
+90 A: sent a packet to B Pkt(seqnum=13, acknum=0, checksum=2213,
+payload=b'nnnnnnnnnnnnnnnnnnnn') \\
+91 B: delivered data! b'nnnnnnnnnnnnnnnnnnnn' \\
+92 B: sent ack Pkt(seqnum=0, acknum=13, checksum=13,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+93 A: got a message: Msg(data=b'oooooooooooooooooooo') \\
+94 A: sent a packet to B Pkt(seqnum=14, acknum=0, checksum=2234,
+payload=b'oooooooooooooooooooo') \\
+95 A: got an ack Pkt(seqnum=0, acknum=12, checksum=12,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+96 A: restarting timer! \\
+97 A: got an ack Pkt(seqnum=0, acknum=13, checksum=13,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+98 A: restarting timer! \\
+99 B: delivered data! b'oooooooooooooooooooo' \\
+\an{Start of a packet being lost} \\
+100      \hspace*{10mm}     TO\_LAYER3: packet being lost \\
+101 B: sent ack Pkt(seqnum=0, acknum=14, checksum=14,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+102 A: got a message: Msg(data=b'pppppppppppppppppppp') \\
+103 A: sent a packet to B Pkt(seqnum=15, acknum=0, checksum=2255,
+payload=b'pppppppppppppppppppp') \\
+104 A: got a message: Msg(data=b'qqqqqqqqqqqqqqqqqqqq') \\
+105 A: sent a packet to B Pkt(seqnum=0, acknum=0, checksum=2260,
+payload=b'qqqqqqqqqqqqqqqqqqqq') \\
+106 B: delivered data! b'pppppppppppppppppppp' \\
+\an{Highest in-order was acked, we don't have resend lost ack} \\
+107 B: sent ack Pkt(seqnum=0, acknum=15, checksum=15,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+108 A: got an ack Pkt(seqnum=0, acknum=15, checksum=15,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+109 A: restarting timer! \\
+110 B: delivered data! b'qqqqqqqqqqqqqqqqqqqq' \\
+\an{Start of a packet being lost} \\
+111    \hspace*{10mm}       TO\_LAYER3: packet being lost \\
+112 B: sent ack Pkt(seqnum=0, acknum=0, checksum=0,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+113 A: got a message: Msg(data=b'rrrrrrrrrrrrrrrrrrrr') \\
+114 A: sent a packet to B Pkt(seqnum=1, acknum=0, checksum=2281,
+payload=b'rrrrrrrrrrrrrrrrrrrr') \\
+115 A: got a message: Msg(data=b'ssssssssssssssssssss') \\
+\an{Start of a packet being corrupted} \\
+116     \hspace*{10mm}      TO\_LAYER3: packet being corrupted \\
+117 A: sent a packet to B Pkt(seqnum=2, acknum=0, checksum=2302,
+payload=b'ssssssssssssssssssss') \\
+118 B: delivered data! b'rrrrrrrrrrrrrrrrrrrr' \\
+119 B: sent ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+120 A: got a message: Msg(data=b'tttttttttttttttttttt') \\
+121 A: sent a packet to B Pkt(seqnum=3, acknum=0, checksum=2323,
+payload=b'tttttttttttttttttttt') \\
+122 A: got an ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+123 A: restarting timer! \\
+\an{B found corrupted packet, so it sent last ack sent!} \\
+124 B: something went wrong, resending last ack Pkt(seqnum=0, acknum=1,
+checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+125 A: got an ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+126 A: restarting timer! \\
+\an{B keeps getting out of order packet} \\
+127 B: something went wrong, resending last ack Pkt(seqnum=0, acknum=1,
+checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+\an{Start of a packet being lost} \\
+128     \hspace*{10mm}      TO\_LAYER3: packet being lost \\
+129 A: got a message: Msg(data=b'uuuuuuuuuuuuuuuuuuuu') \\
+130 A: sent a packet to B Pkt(seqnum=4, acknum=0, checksum=2344,
+payload=b'uuuuuuuuuuuuuuuuuuuu') \\
+131 A: got a message: Msg(data=b'vvvvvvvvvvvvvvvvvvvv') \\
+132 A: sent a packet to B Pkt(seqnum=5, acknum=0, checksum=2365,
+payload=b'vvvvvvvvvvvvvvvvvvvv') \\
+\an{B keeps getting out of order packet} \\
+133 B: something went wrong, resending last ack Pkt(seqnum=0, acknum=1,
+checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+\an{B keeps getting out of order packet} \\
+134 B: something went wrong, resending last ack Pkt(seqnum=0, acknum=1,
+checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+\an{Timeout finally happens, this will help get the expected packet B keeps acking back.} \\
+135 A: timer interrupt! \\
+136 A: starting timer! \\
+137 A: resending packets from window \\
+\an{This is the packet B is expecting!} \\
+138 A: resent Pkt(seqnum=2, acknum=0, checksum=2302,
+payload=b'ssssssssssssssssssss') \\
+139 A: resent Pkt(seqnum=3, acknum=0, checksum=2323,
+payload=b'tttttttttttttttttttt') \\
+140 A: resent Pkt(seqnum=4, acknum=0, checksum=2344,
+payload=b'uuuuuuuuuuuuuuuuuuuu') \\
+141 A: resent Pkt(seqnum=5, acknum=0, checksum=2365,
+payload=b'vvvvvvvvvvvvvvvvvvvv') \\
+142 A: got an ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+143 A: restarting timer! \\
+144 A: got an ack Pkt(seqnum=0, acknum=1, checksum=1,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+145 A: restarting timer! \\
+146 A: got a message: Msg(data=b'wwwwwwwwwwwwwwwwwwww') \\
+147 A: sent a packet to B Pkt(seqnum=6, acknum=0, checksum=2386,
+payload=b'wwwwwwwwwwwwwwwwwwww') \\
+148 B: delivered data! b'ssssssssssssssssssss' \\
+\an{Finally B is happy} \\
+149 B: sent ack Pkt(seqnum=0, acknum=2, checksum=2,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+150 A: got an ack Pkt(seqnum=0, acknum=2, checksum=2,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+151 A: restarting timer! \\
+152 B: delivered data! b'tttttttttttttttttttt' \\
+153 B: sent ack Pkt(seqnum=0, acknum=3, checksum=3,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+154 B: delivered data! b'uuuuuuuuuuuuuuuuuuuu' \\
+155 B: sent ack Pkt(seqnum=0, acknum=4, checksum=4,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+156 A: got an ack Pkt(seqnum=0, acknum=3, checksum=3,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+157 A: restarting timer! \\
+158 A: got a message: Msg(data=b'xxxxxxxxxxxxxxxxxxxx') \\
+159 A: sent a packet to B Pkt(seqnum=7, acknum=0, checksum=2407,
+payload=b'xxxxxxxxxxxxxxxxxxxx') \\
+160 B: delivered data! b'vvvvvvvvvvvvvvvvvvvv' \\
+161 B: sent ack Pkt(seqnum=0, acknum=5, checksum=5,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+162 A: got an ack Pkt(seqnum=0, acknum=4, checksum=4,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+163 A: restarting timer! \\
+164 A: got an ack Pkt(seqnum=0, acknum=5, checksum=5,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+165 A: restarting timer! \\
+166 B: delivered data! b'wwwwwwwwwwwwwwwwwwww' \\
+\an{Start of a packet being corrupted} \\
+167    \hspace*{10mm}       TO\_LAYER3: packet being corrupted \\
+168 B: sent ack Pkt(seqnum=0, acknum=6, checksum=6,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+169 B: delivered data! b'xxxxxxxxxxxxxxxxxxxx' \\
+170 B: sent ack Pkt(seqnum=0, acknum=7, checksum=7,
+payload=b'\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00\textbackslash{}x00')
+\\
+171 A: got corrupt packet! \\
+172 A: got a message: Msg(data=b'yyyyyyyyyyyyyyyyyyyy') \\
+173 A: sent a packet to B Pkt(seqnum=8, acknum=0, checksum=2428,
+payload=b'yyyyyyyyyyyyyyyyyyyy') \\
+174 ===== SIMULATION ENDS \\
+175  \\
+176 SIMULATION SUMMARY \\
+177 -------------------------------- \\
+178 \# layer5 msgs provided to A:      25 \\
+179 \# elapsed time units:             200.81247651908276 \\
+180  \\
+181 \# layer3 packets sent by A:       29 \\
+182 \# layer3 packets sent by B:       28 \\
+183 \# layer3 packets lost:            3 \\
+184 \# layer3 packets corrupted:       4 \\
+185 \# layer5 msgs delivered by A:     0 \\
+186 \# layer5 msgs delivered by B:     24 \\
+187 \# layer5 msgs by B/elapsed time:  0.11951448643042521 \\
+188 -------------------------------- \\
+}
+\pagebreak
+\subsection{Statistics}
+It seems that for no corruption and loss the program is working well; all
+packets were delivered. This run also has a low interarrival time, so I would
+argue that under these conditions the program does a good job and is working.
+\\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 10000 -d 10 -z 8 -l 0.0 -c 0.0 -v 0}\\\\
+Results: \\
+\texttt{ \\
+SIMULATION CONFIGURATION\\
+--------------------------------------\\
+(-n) \# layer5 msgs to be provided:      10000\\
+(-d) avg layer5 msg interarrival time:  10.0\\
+(-z) transport protocol seqnum limit:   8\\
+(-l) layer3 packet loss prob:           0.0\\
+(-c) layer3 packet corruption prob:     0.0\\
+(-s) simulation random seed:            1713808376033693464\\
+--------------------------------------\\
+\\
+SIMULATION SUMMARY\\
+--------------------------------\\
+\# layer5 msgs provided to A:      10000\\
+\# elapsed time units:             99155.50723812348\\
+\\
+\# layer3 packets sent by A:       10000\\
+\# layer3 packets sent by B:       9999\\
+\# layer3 packets lost:            0\\
+\# layer3 packets corrupted:       0\\
+\# layer5 msgs delivered by A:     0\\
+\# layer5 msgs delivered by B:     9999\\
+\# layer5 msgs by B/elapsed time:  0.10084160001307085\\
+--------------------------------\\
+}
+\subsection{Statistics}
+This run has a high interarrival time and with a 5\% loss chance. The results show that all packets were delivered by B! This shows that the program is works for recovering lost packets, and not sending stuff out of order.
+\\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 10000 -d 100 -z 8 -l 0.05 -c 0.0 -v 0}\\\\
+Results: \\
+\texttt{\\
+SIMULATION CONFIGURATION\\
+--------------------------------------\\
+(-n) \# layer5 msgs to be provided:      10000\\
+(-d) avg layer5 msg interarrival time:  100.0\\
+(-z) transport protocol seqnum limit:   8\\
+(-l) layer3 packet loss prob:           0.05\\
+(-c) layer3 packet corruption prob:     0.0\\
+(-s) simulation random seed:            1713808376498672750\\
+--------------------------------------\\
+\\
+SIMULATION SUMMARY\\
+--------------------------------\\
+\# layer5 msgs provided to A:      10000\\
+\# elapsed time units:             998233.6935663237\\
+\\
+\# layer3 packets sent by A:       11128\\
+\# layer3 packets sent by B:       10568\\
+\# layer3 packets lost:            1085\\
+\# layer3 packets corrupted:       0\\
+\# layer5 msgs delivered by A:     0\\
+\# layer5 msgs delivered by B:     9999\\
+\# layer5 msgs by B/elapsed time:  0.01001669254849256\\
+--------------------------------\\}
+
+\subsection{Statistics}
+This run has an 8\% chance of corruption and pretty low interarrival time. Even
+under these conditions the program still manages to recover all packets and are
+delivered by B. This shows that the program recovers from loss and corruption the same.
+\\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 10000 -d 30 -z 8 -l 0.0 -c 0.08 -v 0}\\\\
+Results: \\
+\texttt{\\
+SIMULATION CONFIGURATION\\
+--------------------------------------\\
+(-n) \# layer5 msgs to be provided:      10000\\
+(-d) avg layer5 msg interarrival time:  30.0\\
+(-z) transport protocol seqnum limit:   8\\
+(-l) layer3 packet loss prob:           0.0\\
+(-c) layer3 packet corruption prob:     0.08\\
+(-s) simulation random seed:            1713808376959591504\\
+--------------------------------------\\
+\\
+SIMULATION SUMMARY\\
+--------------------------------\\
+\# layer5 msgs provided to A:      10000\\
+\# elapsed time units:             299423.32213715\\
+\\
+\# layer3 packets sent by A:       12550\\
+\# layer3 packets sent by B:       12549\\
+\# layer3 packets lost:            0\\
+\# layer3 packets corrupted:       2047\\
+\# layer5 msgs delivered by A:     0\\
+\# layer5 msgs delivered by B:     9999\\
+\# layer5 msgs by B/elapsed time:  0.033394192304833176\\
+--------------------------------\\}
+
+\subsection{Statistics}
+This simulation has a 10\% chance of corruption and loss. It is also under a
+pretty low interarrival time. Even under these conditions the program does
+surprisingly well. It was able to deliver 6023 messages out of 10000 this is
+around 60\% messages sucessfully sent. This simulation probably caused a lot of
+timeout cycles to occur and if given enough time the program would probably
+still be able to deliver all packets. This is based on the previous simulation
+runs where they are able to recover from corruption and loss on their own.
+\\\\
+\hspace*{10mm} \texttt{python3 rdtsim.py -n 10000 -d 13 -z 20 -l 0.1 -c 0.1 -v 0}\\\\
+Results: \\
+\texttt{\\
+SIMULATION CONFIGURATION\\
+--------------------------------------\\
+(-n) \# layer5 msgs to be provided:      10000\\
+(-d) avg layer5 msg interarrival time:  13.0\\
+(-z) transport protocol seqnum limit:   20\\
+(-l) layer3 packet loss prob:           0.1\\
+(-c) layer3 packet corruption prob:     0.1\\
+(-s) simulation random seed:            1713808377510185247\\
+--------------------------------------\\
+\\
+SIMULATION SUMMARY\\
+--------------------------------\\
+\# layer5 msgs provided to A:      10000\\
+\# elapsed time units:             129720.07210883804\\
+\\
+\# layer3 packets sent by A:       20158\\
+\# layer3 packets sent by B:       18155\\
+\# layer3 packets lost:            3823\\
+\# layer3 packets corrupted:       3525\\
+\# layer5 msgs delivered by A:     0\\
+\# layer5 msgs delivered by B:     6023\\
+\# layer5 msgs by B/elapsed time:  0.046430748164760255\\
+--------------------------------\\}
+
+\end{document}
+
+
+
+Design, describing the design of your EntityA and EntityB classes, how they
+work, and any design trade-offs considered and made.
+
+Testing, describing the tests you executed to convince yourself that your
+code works correctly. Document any cases in which your code is known not to work
+correctly.
+
+Output, showing output that illustrates the correct functioning of your
+program.
+
+This section of your report must include output for a single run of the
+simulator, up to the point when at least 20 messages were successfully
+transferred from sender to receiver (i.e., the sender received ACKs for these
+messages), a loss probability of 0.05, a corruption probability of 0.05, and a
+trace level of 2. Annotate your output to show how your protocol correctly
+recovered from packet loss and corruption.
+
+This section of your report must also show the statistics for your program
+under various loss and corruption probabilities, for runs of the simulator in
+which at least 1,000 layer5 messages are simulated at the sender. Collect and
+report statistics as previously described for PA2. For each run of the
+simulator, discuss whether or not the statistics are reasonable. Does the
+simulator appear to be functioning correctly? Is your protocol working well?
+

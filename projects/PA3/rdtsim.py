@@ -120,9 +120,63 @@ class EntityA:
     # Called from layer 5, passed the data to be sent to other side.
     # The argument `message` is a Msg containing the data to be sent.
     def output(self, message):
+        trace(f'A: got a message: {message.__str__()}')
+
         msg = message.data
         self.buffer.append((self.seq, msg))
+
         if self.index < (self.base + self.window_size):
+            data = self.buffer[self.index]
+            pkt = make_packet(data[0], 0, data[1])
+            to_layer3(self, pkt)
+            trace(f'A: sent a packet to B {pkt.__str__()}')
+
+            if self.index == self.base:
+                trace(f'A: starting timer')
+                start_timer(self, self.timeout)
+
+            self.index += 1
+        else: 
+            trace(f'A: window is full!')
+
+        self.seq = (self.seq + 1) % self.limit
+
+    # Called from layer 3, when a packet arrives for layer 4 at EntityA.
+    # The argument `packet` is a Pkt containing the newly arrived packet.
+    def input(self, packet):
+        if not corrupt(packet):
+            trace(f'A: got an ack {packet.__str__()}')
+            for i in range(self.base, self.index):
+                if self.buffer[i][0] == packet.acknum:
+                    self.base = i + 1
+            if self.base >= self.index:
+                trace(f'A: no packets in transit, stopping timer.')
+                stop_timer(self)
+            else:
+                trace(f'A: restarting timer!')
+                stop_timer(self)
+                start_timer(self, self.timeout)
+
+            while self.send_more():
+                trace(f'A: window space availible sent packet from buffer!')
+        else: 
+            trace(f'A: got corrupt packet!')
+
+    # Called when A's timer goes off.
+    def timer_interrupt(self):
+        trace(f'A: timer interrupt!')
+        trace(f'A: starting timer!')
+        start_timer(self, self.timeout)
+        trace(f'A: resending packets from window')
+        for i in range(self.base, self.index):
+            data = self.buffer[i]
+            pkt =  make_packet(data[0], 0, data[1])
+            to_layer3(self, pkt)
+            trace(f'A: resent {pkt.__str__()}')
+            
+    def send_more(self):
+        if (self.index < len(self.buffer)) and (self.index < (self.base + self.window_size)):
+            # trace(f'A: sending more')
             data = self.buffer[self.index]
             to_layer3(self, make_packet(data[0], 0, data[1]))
 
@@ -131,37 +185,6 @@ class EntityA:
 
             self.index += 1
 
-        self.seq = (self.seq + 1) % self.limit
-
-    # Called from layer 3, when a packet arrives for layer 4 at EntityA.
-    # The argument `packet` is a Pkt containing the newly arrived packet.
-    def input(self, packet):
-        if not corrupt(packet):
-            for i in range(self.base, self.index):
-                if self.buffer[i][0] == packet.acknum:
-                    self.base = i + 1
-            if self.base > self.index:
-                stop_timer(self)
-            else:
-                stop_timer(self)
-                start_timer(self, self.timeout)
-
-            while self.send_more():
-                pass
-
-    # Called when A's timer goes off.
-    def timer_interrupt(self):
-        start_timer(self, self.timeout)
-        for i in range(self.base, self.index):
-            data = self.buffer[i]
-            to_layer3(self, make_packet(data[0], 0, data[1]))
-            
-    def send_more(self):
-        if (self.index < len(self.buffer)) and (self.index < (self.base + self.window_size)):
-            # trace(f'A: sending more')
-            data = self.buffer[self.index]
-            to_layer3(self, make_packet(data[0], 0, data[1]))
-            self.index += 1
             #self.seq = (self.seq + 1) % self.limit
             return True 
         else:
