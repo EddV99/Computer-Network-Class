@@ -15,26 +15,35 @@ To start the proxy server:
 ### GET Commands
 The proxy has cache and domain blocking capabilities that are controlled using GET requests.
 
-`/proxy/cache/enable`
-    Enable the proxy’s cache; if it is already enabled, do nothing. This request does not affect the contents of the cache. Future requests will consult the cache.
+- `/proxy/cache/enable`
 
-`/proxy/cache/disable`
-    Disable the proxy’s cache; if it is already disabled, do nothing. This request does not affect the contents of the cache. Future requests will not consult the cache.
-`/proxy/cache/flush`
+   Enable the proxy’s cache; if it is already enabled, do nothing. This request does not affect the contents of the cache. Future requests will consult the cache.
+
+- `/proxy/cache/disable`
+
+  Disable the proxy’s cache; if it is already disabled, do nothing. This request does not affect the contents of the cache. Future requests will not consult the cache.
+  
+- `/proxy/cache/flush`
+  
     Flush (empty) the proxy’s cache. This request does not affect the enabled/disabled state of the cache.
 
-`/proxy/blocklist/enable`
+- `/proxy/blocklist/enable`
+  
     Enable the proxy’s blocklist; if it is already enabled, do nothing. This request does not affect the contents of the blocklist. Future requests will consult the blocklist.
 
-`/proxy/blocklist/disable`
+- `/proxy/blocklist/disable`
+  
     Disable the proxy’s blocklist; if it is already disabled, do nothing. This request does not affect the contents of the blocklist. Future requests will not consult the blocklist.
 
-`/proxy/blocklist/add/<string>`
+- `/proxy/blocklist/add/<string>`
+  
     Add the specified string to the proxy’s blocklist; if it is already in the blocklist, do nothing.
 
-`/proxy/blocklist/remove/<string>`
+- `/proxy/blocklist/remove/<string>`
+  
     Remove the specified string from the proxy’s blocklist; if it is not already in the blocklist, do nothing.
 
-`/proxy/blocklist/flush`
+- `/proxy/blocklist/flush`
+  
     Flush (empty) the proxy’s blocklist. This request does not affect the enabled/disabled state of the blocklist.
 
