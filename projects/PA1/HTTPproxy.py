@@ -9,12 +9,10 @@ import sys
 # global variables ------------------------------------------------
 cache = {}
 cache_enabled = False
-
 blocklist = []
 blocklist_enabled = False
 
 
-# start of functions -----------------------------------------------
 def ctrl_c_pressed(signal, frame):
     """signal handler for pressing ctrl-c"""
     sys.exit(0)
@@ -85,7 +83,7 @@ def caching(host: bytes, path: bytes, port: int, headers: [bytes], client_socket
 
         lines = response.split(b'\r\n')
         request_line = lines[0]
-        # only cache obj with 200 OK 
+        # only cache obj with 200 OK
         if b'200 OK' in request_line:
             update_cache(requested_obj, response)
         client_socket.send(response)
@@ -504,4 +502,5 @@ with socket(AF_INET, SOCK_STREAM) as listen_socket:
     while True:
         # accept and let thread handle connection
         client_socket, client_addr = listen_socket.accept()
-        threading.Thread(target=handle_client, args=(client_socket, client_addr)).start()
+        threading.Thread(target=handle_client, args=(
+            client_socket, client_addr)).start()
